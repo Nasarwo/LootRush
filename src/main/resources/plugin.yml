@@ -1,0 +1,20 @@
+main: net.dagger.randomitemminigame.RandomItemMinigameMod
+name: RandomItemMinigame
+version: 1.0.0
+description: Мини-игра в которой нужно найти случайный предмет и подставлять противников перед телепортом
+authors: [nasarwo]
+website:
+api-version: 1.21
+load: STARTUP
+
+commands:
+  randomitem:
+    description: Управление мини-игрой случайного предмета
+    usage: /randomitem <start|stop|status|role|cancel|skip>
+    aliases: [rim]
+    permission: randomitemminigame.admin
+
+permissions:
+  randomitemminigame.admin:
+    description: Позволяет запускать и останавливать мини-игру
+    default: op

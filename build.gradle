@@ -1,0 +1,105 @@
+plugins {
+	id "java"
+}
+
+base.archivesName = "plugin"
+
+def toolsDir = layout.projectDirectory.dir("build/tools")
+def runDir = layout.projectDirectory.dir("run")
+def pluginsDir = runDir.dir("plugins")
+def paperJar = runDir.file("paper.jar")
+
+repositories {
+	mavenCentral()
+	maven {
+		name = "papermc-repo"
+		url = "https://repo.papermc.io/repository/maven-public/"
+	}
+	maven {
+		name = "dmulloy2-repo"
+		url = "https://repo.dmulloy2.net/repository/public/"
+	}
+}
+
+dependencies {
+	compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
+}
+
+
+def javaVersion = JavaVersion.VERSION_21
+
+java {
+	sourceCompatibility = javaVersion
+	targetCompatibility = javaVersion
+	toolchain.languageVersion = JavaLanguageVersion.of(javaVersion.toString())
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = javaVersion.toString() as Integer
+}
+
+tasks.register('prepareDirs') {
+	group 'paper'
+	doLast {
+		toolsDir.asFile.mkdirs()
+		pluginsDir.asFile.mkdirs()
+	}
+}
+
+tasks.register('downloadPaper') {
+	group 'paper'
+	dependsOn 'prepareDirs'
+
+	doLast {
+		if (!paperJar.asFile.exists()) {
+			new URL("https://fill-data.papermc.io/v1/objects/8de7c52c3b02403503d16fac58003f1efef7dd7a0256786843927fa92ee57f1e/paper-1.21.8-60.jar").withInputStream { i ->
+				paperJar.asFile.withOutputStream { it << i }
+			}
+		}
+	}
+}
+
+tasks.register('buildPaper', Exec) {
+	group 'paper'
+	dependsOn tasks.downloadPaper
+
+	workingDir = runDir.asFile
+	commandLine = ["java", "-jar", paperJar.asFile.absolutePath, "--rev", "1.21.8"]
+	onlyIf { !paperJar.asFile.exists() }
+}
+
+tasks.register('copyPlugin', Copy) {
+	group 'paper'
+	dependsOn tasks.named('jar')
+
+	from layout.buildDirectory.file("libs/plugin.jar")
+	into layout.projectDirectory.dir("run/plugins")
+}
+
+tasks.register('runPaperServer', Exec) {
+	group 'paper'
+	dependsOn tasks.build
+	dependsOn tasks.copyPlugin
+
+	workingDir = file("run")
+	commandLine = ["java", "-jar", paperJar] as List<String>
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+processResources {
+	def props = [version: version]
+	inputs.properties props
+	filteringCharset 'UTF-8'
+	filesMatching('plugin.yml') {
+		expand props
+	}
+}
