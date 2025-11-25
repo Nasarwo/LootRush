@@ -127,7 +127,6 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 				.append(colored("Нужно первым добыть: ", NamedTextColor.YELLOW))
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 				.build());
-		broadcast(colored("Игроки телепортированы. Отсчёт " + COUNTDOWN_SECONDS + " сек...", NamedTextColor.GRAY));
 		playSoundForAll(Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
 
 		List<Player> participantsSnapshot = new ArrayList<>(participants);
@@ -146,6 +145,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 				return;
 			}
 
+			broadcast(colored("Игроки телепортированы. Отсчёт " + COUNTDOWN_SECONDS + " сек...", NamedTextColor.GRAY));
 			winService.removeTargetItemFromPlayers(participantsSnapshot, targetItem);
 			startCountdown();
 		}));
@@ -170,6 +170,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		clearAllPlayerRespawns();
 		state = GameState.IDLE;
 		targetItem = null;
+		worldService.setWorldStateAfterGame();
 		broadcast(colored("Мини-игра остановлена администратором.", NamedTextColor.RED));
 	}
 
@@ -191,6 +192,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		clearAllPlayerRespawns();
 		state = GameState.IDLE;
 		targetItem = null;
+		worldService.setWorldStateAfterGame();
 		broadcast(colored("Начало игры прервано администратором.", NamedTextColor.RED));
 	}
 
