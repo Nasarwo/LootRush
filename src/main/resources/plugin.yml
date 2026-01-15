@@ -9,7 +9,7 @@ load: STARTUP
 
 commands:
   randomitem:
-    description: Управление мини-игрой случайного предмета
+    description: Управление мини-игрой
     usage: /randomitem <start|stop|status|role|cancel|skip>
     aliases: [rim]
     permission: randomitemminigame.admin

@@ -24,10 +24,6 @@ bin/
 # VS Code
 .vscode/
 
-# MCreator
-*.mcreator
-mcreator.gradle
-
 # Minecraft Server
 run/
 !run/plugins/
