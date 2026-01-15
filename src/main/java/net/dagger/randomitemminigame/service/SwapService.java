@@ -20,8 +20,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class SwapService {
-	private static final int SWAP_INTERVAL_TICKS = 5 * 60 * 20; // 5 минут между телепортами
-	private static final int FIRST_SWAP_TICKS = (4 * 60 + 50) * 20; // 4:50 для первого телепорта
+	private static final int SWAP_INTERVAL_TICKS = 5 * 60 * 20;
+	private static final int FIRST_SWAP_TICKS = (4 * 60 + 50) * 20;
 	private static final int SWAP_COUNTDOWN_SECONDS = 10;
 
 	private final JavaPlugin plugin;
@@ -44,7 +44,7 @@ public class SwapService {
 	public void start() {
 		stop();
 		task = new BukkitRunnable() {
-			private int ticksUntilSwap = FIRST_SWAP_TICKS; // Первый телепорт через 4:50
+			private int ticksUntilSwap = FIRST_SWAP_TICKS;
 			private int countdown = -1;
 
 			@Override
@@ -55,7 +55,7 @@ public class SwapService {
 
 				List<Player> participants = participantsSupplier.get();
 				if (participants.size() < 2) {
-					ticksUntilSwap = FIRST_SWAP_TICKS; // Сбрасываем на первый интервал
+					ticksUntilSwap = FIRST_SWAP_TICKS;
 					countdown = -1;
 					return;
 				}
@@ -77,7 +77,6 @@ public class SwapService {
 
 				ticksUntilSwap -= 20;
 
-				// Показываем предупреждения о предстоящем телепорте
 				int secondsUntilSwap = ticksUntilSwap / 20;
 				if (secondsUntilSwap == 60) {
 					participantBroadcast.accept(Component.text("Случайная смена мест через 1 минуту!", NamedTextColor.YELLOW));
@@ -104,15 +103,10 @@ public class SwapService {
 	private void performSwap(List<Player> participants) {
 		participantBroadcast.accept(Component.text("Игроки меняются местами!", NamedTextColor.LIGHT_PURPLE));
 
-		// Сохраняем текущие локации и спавны для каждого игрока
-		// Важно: сохраняем ДО перемешивания, чтобы корректно обменивать позиции
 		Map<Player, Location> playerLocations = new HashMap<>();
 		Map<Player, Location> playerRespawnLocations = new HashMap<>();
 		for (Player player : participants) {
-			// Сохраняем текущую позицию игрока (для телепортации другого игрока сюда)
 			playerLocations.put(player, player.getLocation().clone());
-			// Сохраняем текущий спавн игрока (для передачи другому игроку)
-			// Если спавна нет, используем текущую позицию (должно быть установлено при старте)
 			Location respawnLoc = player.getRespawnLocation();
 			if (respawnLoc == null) {
 				respawnLoc = player.getLocation().clone();
@@ -120,43 +114,27 @@ public class SwapService {
 			playerRespawnLocations.put(player, respawnLoc);
 		}
 
-		// Перемешиваем список игроков для случайного обмена
 		Collections.shuffle(participants, random);
 
-		// Делаем циклический сдвиг: каждый игрок идёт на позицию следующего в перемешанном списке
-		// Это гарантирует, что ВСЕ игроки перемещаются, даже если их нечётное количество
-		// При этом спавны тоже меняются: каждый игрок получает спавн того, на чьё место он переместился
 		for (int i = 0; i < participants.size(); i++) {
 			Player currentPlayer = participants.get(i);
-			// Следующий игрок в перемешанном списке (последний идёт на позицию первого)
 			Player targetPlayer = participants.get((i + 1) % participants.size());
 
 			Location targetLocation = playerLocations.get(targetPlayer);
 			Location targetRespawnLocation = playerRespawnLocations.get(targetPlayer);
 
 			currentPlayer.teleport(targetLocation);
-			// Очищаем инвентарь игрока после телепортации
 			currentPlayer.getInventory().clear();
 			currentPlayer.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
 			currentPlayer.getInventory().setItemInOffHand(null);
-			// Устанавливаем спавн того игрока, на чьё место был перемещён текущий игрок
-			// Это важно: после смерти игрок появится на спавне того, на чьё место он переместился,
-			// а не на своём старом спавне, что предотвратит поиск других игроков
 			currentPlayer.setRespawnLocation(targetRespawnLocation, true);
-			// Устанавливаем полную неуязвимость на 10 секунд (200 тиков) после телепортации
-			// Используем задержку, чтобы телепортация не сбросила неуязвимость
-			// Это предотвращает убийство игроков прыжком с высоты, в лаву, утоплением и т.д.
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
 				if (currentPlayer.isOnline()) {
-					// Устанавливаем полную неуязвимость
 					currentPlayer.setInvulnerable(true);
-					// Также устанавливаем максимальное значение noDamageTicks для дополнительной защиты
 					currentPlayer.setNoDamageTicks(Integer.MAX_VALUE);
-					// Через 10 секунд (200 тиков) отключаем неуязвимость
 					Bukkit.getScheduler().runTaskLater(plugin, () -> {
 						if (currentPlayer.isOnline()) {
 							currentPlayer.setInvulnerable(false);
-							// Устанавливаем стандартное значение noDamageTicks
 							currentPlayer.setNoDamageTicks(20);
 						}
 					}, 200L);

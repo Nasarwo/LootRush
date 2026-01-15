@@ -39,11 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-
-
-/**
- * Controls the lifecycle of the random item minigame.
- */
 public class RandomItemGameManager implements Listener, CommandExecutor, TabCompleter {
 	private static final int COUNTDOWN_SECONDS = 5;
 
@@ -130,7 +125,6 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		playSoundForAll(Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
 
 		List<Player> participantsSnapshot = new ArrayList<>(participants);
-		// Инициализируем жизни и scoreboard для всех участников
 		livesService.initializeLives(participantsSnapshot);
 		scoreboardService.createScoreboard(livesService.getAllLives());
 
@@ -164,9 +158,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		swapService.stop();
 		livesService.clear();
 		scoreboardService.clear();
-		// Очищаем инвентари всех игроков при остановке игры
 		clearAllPlayerInventories();
-		// Очищаем спавны всех игроков при остановке игры
 		clearAllPlayerRespawns();
 		state = GameState.IDLE;
 		targetItem = null;
@@ -180,12 +172,10 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 			return;
 		}
 
-		// Прерываем отсчёт и загрузку чанков
 		cancelCountdown();
 		timerService.cancel();
 		timerService.updateState(GameState.IDLE);
 		swapService.stop();
-		// Отменяем все операции телепортации и загрузки чанков
 		teleportService.cancel();
 		livesService.clear();
 		scoreboardService.clear();
@@ -210,11 +200,9 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		Material oldItem = targetItem;
 		targetItem = itemService.pickRandomItem();
 
-		// Удаляем старый предмет из инвентарей всех игроков
 		List<Player> participants = winService.getAlivePlayers();
 		winService.removeTargetItemFromPlayers(participants, targetItem);
 
-		// Уведомляем всех о новом предмете
 		broadcast(Component.text()
 				.append(colored("Предмет пропущен администратором. ", NamedTextColor.YELLOW))
 				.append(colored("Новый предмет: ", NamedTextColor.GOLD))
@@ -275,7 +263,6 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		List<Player> targets = new ArrayList<>();
 		if (args.length >= 3) {
 			String selector = args[2];
-			// Проверяем, является ли это селектором (начинается с @)
 			if (selector.startsWith("@")) {
 				try {
 					List<Entity> entities = Bukkit.selectEntities(sender, selector);
@@ -293,7 +280,6 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 					return;
 				}
 			} else {
-				// Обычное имя игрока
 				Player target = Bukkit.getPlayer(selector);
 				if (target == null) {
 					sender.sendMessage(colored("Игрок " + selector + " не найден.", NamedTextColor.RED));
@@ -308,24 +294,22 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 			return;
 		}
 
-		// Устанавливаем роль для всех найденных игроков
 		for (Player target : targets) {
 			roleService.setRole(target, newRole);
 			if (!sender.equals(target)) {
-				target.sendMessage(colored("Администратор установил вам роль " + roleName, NamedTextColor.AQUA));
+				target.sendMessage(colored("Администратор установил вам роль " + roleName + ".", NamedTextColor.AQUA));
 			}
 		}
 
 		if (targets.size() == 1) {
-			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.get(0).getName(), NamedTextColor.GREEN));
+			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.get(0).getName() + ".", NamedTextColor.GREEN));
 		} else {
-			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.size() + " игроков", NamedTextColor.GREEN));
+			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.size() + " игроков.", NamedTextColor.GREEN));
 		}
 	}
 
 	@EventHandler
 	public void onEntityDamage(EntityDamageEvent event) {
-		// Отменяем весь урон для неуязвимых игроков (после телепортации)
 		if (event.getEntity() instanceof Player player) {
 			if (player.isInvulnerable()) {
 				event.setCancelled(true);
@@ -361,20 +345,16 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 			return;
 		}
 
-		// Уменьшаем жизни игрока
 		int lives = livesService.decreaseLives(player);
 
-		// Обновляем scoreboard для всех игроков
 		scoreboardService.updateAllPlayersLives(livesService.getAllLives());
 
 		if (!livesService.hasLives(player)) {
-			// Игрок исчерпал все жизни - переводим в наблюдатели
 			roleService.setRole(player, Role.SPECTATOR);
 			scoreboardService.removePlayer(player);
 			player.sendMessage(colored("Вы исчерпали все жизни и теперь наблюдаете за раундом.", NamedTextColor.RED));
 			broadcastToParticipants(colored(player.getName() + " исчерпал все жизни и выбыл из игры.", NamedTextColor.GRAY));
 		} else {
-			// У игрока ещё есть жизни - сообщаем сколько осталось
 			player.sendMessage(colored("У вас осталось жизней: " + lives + " из " + LivesService.getMaxLives(), NamedTextColor.YELLOW));
 		}
 	}
@@ -518,7 +498,6 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 			player.getInventory().setArmorContents(new ItemStack[] { null, null, null, null });
 			player.getInventory().setItemInOffHand(null);
 
-			// Очищаем спавн игрока после окончания игры
 			player.setRespawnLocation(null, false);
 
 			Location spawn = player.getWorld().getSpawnLocation();
@@ -531,14 +510,12 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 	}
 
 	private void clearAllPlayerRespawns() {
-		// Очищаем спавны всех игроков
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			player.setRespawnLocation(null, false);
 		}
 	}
 
 	private void clearAllPlayerInventories() {
-		// Очищаем инвентари всех игроков
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			player.getInventory().clear();
 			player.getInventory().setArmorContents(new ItemStack[] { null, null, null, null });

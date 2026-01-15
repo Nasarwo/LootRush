@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -23,7 +24,6 @@ public class ScoreboardService {
 		livesObjective = gameScoreboard.registerNewObjective("lives", Criteria.DUMMY, Component.text("Жизни", NamedTextColor.RED));
 		livesObjective.setDisplaySlot(DisplaySlot.SIDEBAR);
 
-		// Устанавливаем scoreboard всем участникам и обновляем их жизни
 		for (UUID playerId : playerLives.keySet()) {
 			Player player = Bukkit.getPlayer(playerId);
 			if (player != null && player.isOnline()) {
@@ -62,16 +62,17 @@ public class ScoreboardService {
 			return;
 		}
 
-		// Удаляем старый таймер, если он был
 		if (lastTimerKey != null) {
 			gameScoreboard.resetScores(lastTimerKey);
 		}
 
-		// Используем специальный ключ для таймера
-		lastTimerKey = "§6Время: §e" + timeString;
-		livesObjective.getScore(lastTimerKey).setScore(999); // Высокий score, чтобы таймер был вверху
+		Component timerComponent = Component.text()
+				.append(Component.text("Время: ", NamedTextColor.GOLD))
+				.append(Component.text(timeString, NamedTextColor.YELLOW))
+				.build();
+		lastTimerKey = LegacyComponentSerializer.legacySection().serialize(timerComponent);
+		livesObjective.getScore(lastTimerKey).setScore(999);
 
-		// Обновляем scoreboard для всех участников
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			if (player.getScoreboard().equals(gameScoreboard)) {
 				player.setScoreboard(gameScoreboard);
@@ -88,18 +89,15 @@ public class ScoreboardService {
 
 	public void clear() {
 		if (gameScoreboard != null) {
-			// Удаляем таймер, если он был
 			if (lastTimerKey != null) {
 				gameScoreboard.resetScores(lastTimerKey);
 				lastTimerKey = null;
 			}
-			// Удаляем scoreboard у всех игроков
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				if (player.getScoreboard().equals(gameScoreboard)) {
 					player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
 				}
 			}
-			// Очищаем объекты
 			if (livesObjective != null) {
 				livesObjective.unregister();
 				livesObjective = null;

@@ -67,17 +67,14 @@ public class TeleportService {
 	}
 
 	public CompletableFuture<Void> scatterPlayers(List<Player> players) {
-		// Отменяем все предыдущие операции перед новым запуском
 		cancelled = true;
 		clearBossBar();
-		// Отменяем все активные операции
 		for (CompletableFuture<?> operation : activeOperations) {
 			if (operation != null && !operation.isDone()) {
 				operation.cancel(false);
 			}
 		}
 		activeOperations.clear();
-		// Сбрасываем флаг отмены при новом запуске
 		cancelled = false;
 		BossBar scatterBar = createScatterBossBar(players, players.size());
 		currentBossBar = scatterBar;
@@ -106,7 +103,6 @@ public class TeleportService {
 
 			List<PlayerScatterTarget> targetsList = new ArrayList<>(targets);
 
-			// Уведомляем игроков о начале загрузки чанков
 			Bukkit.getScheduler().runTask(plugin, () -> {
 				if (cancelled) {
 					return;
@@ -135,30 +131,20 @@ public class TeleportService {
 					plugin.getLogger().info(String.format("[RandomItem] Teleporting %s to %.1f %.1f %.1f",
 							player.getName(), target.location().getX(), target.location().getY(), target.location().getZ()));
 					player.teleport(target.location());
-					// Очищаем инвентарь игрока после телепортации
 					player.getInventory().clear();
 					player.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
 					player.getInventory().setItemInOffHand(null);
-					// Устанавливаем точку спавна игрока на его стартовую позицию в раунде
 					player.setRespawnLocation(target.location(), true);
 
-					// Принудительно обновляем чанки вокруг игрока, чтобы они стали видимыми
 					refreshChunksForPlayer(player, target.location());
 
-					// Устанавливаем полную неуязвимость на 10 секунд (200 тиков) после телепортации
-					// Используем задержку, чтобы телепортация не сбросила неуязвимость
-					// Это предотвращает убийство игроков прыжком с высоты, в лаву, утоплением и т.д.
 					Bukkit.getScheduler().runTaskLater(plugin, () -> {
 						if (player.isOnline() && !cancelled) {
-							// Устанавливаем полную неуязвимость
 							player.setInvulnerable(true);
-							// Также устанавливаем максимальное значение noDamageTicks для дополнительной защиты
 							player.setNoDamageTicks(Integer.MAX_VALUE);
-							// Через 10 секунд (200 тиков) отключаем неуязвимость
 							Bukkit.getScheduler().runTaskLater(plugin, () -> {
 								if (player.isOnline() && !cancelled) {
 									player.setInvulnerable(false);
-									// Устанавливаем стандартное значение noDamageTicks
 									player.setNoDamageTicks(20);
 								}
 							}, 200L);
@@ -249,7 +235,6 @@ public class TeleportService {
 		int chunkX = x >> 4;
 		int chunkZ = z >> 4;
 
-		// Предзагружаем соседние чанки параллельно для ускорения проверки безопасности
 		preloadSurroundingChunks(world, chunkX, chunkZ);
 
 		world.getChunkAtAsyncUrgently(chunkX, chunkZ).thenAccept(chunk -> {
@@ -326,7 +311,6 @@ public class TeleportService {
 			return CompletableFuture.completedFuture(null);
 		}
 
-		// Разделяем чанки на ближние (приоритетные) и дальние для двухэтапной загрузки
 		Set<String> nearChunkKeys = new HashSet<>();
 		Set<String> farChunkKeys = new HashSet<>();
 		Map<String, World> chunkWorlds = new HashMap<>();
@@ -337,7 +321,6 @@ public class TeleportService {
 			int chunkZ = loc.getBlockZ() >> 4;
 			World world = loc.getWorld();
 
-			// Ближние чанки (радиус 6x6) - загружаем в первую очередь для быстрой визуализации
 			for (int dx = -6; dx <= 6; dx++) {
 				for (int dz = -6; dz <= 6; dz++) {
 					int cx = chunkX + dx;
@@ -348,10 +331,8 @@ public class TeleportService {
 				}
 			}
 
-			// Дальние чанки (радиус 12x12, исключая ближние) - загружаем во вторую очередь
 			for (int dx = -12; dx <= 12; dx++) {
 				for (int dz = -12; dz <= 12; dz++) {
-					// Пропускаем ближние чанки
 					if (Math.abs(dx) <= 6 && Math.abs(dz) <= 6) {
 						continue;
 					}
@@ -368,7 +349,6 @@ public class TeleportService {
 		int totalFarChunks = farChunkKeys.size();
 		int totalChunks = totalNearChunks + totalFarChunks;
 
-		// Уведомляем о начале загрузки ближних чанков
 		Bukkit.getScheduler().runTask(plugin, () -> {
 			if (cancelled) {
 				return;
@@ -385,7 +365,6 @@ public class TeleportService {
 			}
 		});
 
-		// Сначала загружаем ближние чанки (приоритетные)
 		List<CompletableFuture<Chunk>> nearChunkFutures = new ArrayList<>();
 		int[] nearChunkCounter = {0};
 		for (String key : nearChunkKeys) {
@@ -394,11 +373,9 @@ public class TeleportService {
 			int chunkX = Integer.parseInt(parts[1]);
 			int chunkZ = Integer.parseInt(parts[2]);
 
-			// Создаём CompletableFuture с логированием каждого чанка
 			CompletableFuture<Chunk> chunkFuture = world.getChunkAtAsyncUrgently(chunkX, chunkZ)
 				.thenApply(chunk -> {
 					if (!cancelled) {
-						// Отправляем сообщение о загрузке каждого чанка
 						Bukkit.getScheduler().runTask(plugin, () -> {
 							if (!cancelled) {
 								nearChunkCounter[0]++;
@@ -421,10 +398,8 @@ public class TeleportService {
 			nearChunkFutures.add(chunkFuture);
 		}
 
-		// Загружаем ближние чанки и сразу обновляем их
 		return CompletableFuture.allOf(nearChunkFutures.toArray(CompletableFuture[]::new))
 			.thenRun(() -> {
-				// Обновляем ближние чанки на главном потоке
 				Bukkit.getScheduler().runTask(plugin, () -> {
 					if (cancelled) {
 						return;
@@ -438,7 +413,6 @@ public class TeleportService {
 						world.refreshChunk(chunkX, chunkZ);
 					}
 
-					// Уведомляем о завершении загрузки ближних чанков
 					for (PlayerScatterTarget target : allTargets) {
 						Player player = Bukkit.getPlayer(target.playerId());
 						if (player != null && player.isOnline()) {
@@ -457,21 +431,18 @@ public class TeleportService {
 					return CompletableFuture.completedFuture(null);
 				}
 
-				// Затем загружаем дальние чанки параллельно
 				List<CompletableFuture<Chunk>> farChunkFutures = new ArrayList<>();
 				int[] farChunkCounter = {0};
 				for (String key : farChunkKeys) {
 					String[] parts = key.split(":");
 					World world = chunkWorlds.get(key);
-					int chunkX = Integer.parseInt(parts[1]);
-					int chunkZ = Integer.parseInt(parts[2]);
+			int chunkX = Integer.parseInt(parts[1]);
+			int chunkZ = Integer.parseInt(parts[2]);
 
-					// Создаём CompletableFuture с логированием каждого чанка
-					CompletableFuture<Chunk> chunkFuture = world.getChunkAtAsyncUrgently(chunkX, chunkZ)
-						.thenApply(chunk -> {
-							if (!cancelled) {
-								// Отправляем сообщение о загрузке каждого чанка
-								Bukkit.getScheduler().runTask(plugin, () -> {
+			CompletableFuture<Chunk> chunkFuture = world.getChunkAtAsyncUrgently(chunkX, chunkZ)
+				.thenApply(chunk -> {
+					if (!cancelled) {
+						Bukkit.getScheduler().runTask(plugin, () -> {
 									if (!cancelled) {
 										farChunkCounter[0]++;
 										for (PlayerScatterTarget target : allTargets) {
@@ -495,7 +466,6 @@ public class TeleportService {
 
 				return CompletableFuture.allOf(farChunkFutures.toArray(CompletableFuture[]::new))
 					.thenRun(() -> {
-						// Обновляем дальние чанки на главном потоке
 						Bukkit.getScheduler().runTask(plugin, () -> {
 							if (cancelled) {
 								return;
@@ -506,11 +476,10 @@ public class TeleportService {
 								World world = chunkWorlds.get(key);
 								int chunkX = Integer.parseInt(parts[1]);
 								int chunkZ = Integer.parseInt(parts[2]);
-								world.refreshChunk(chunkX, chunkZ);
-							}
+							world.refreshChunk(chunkX, chunkZ);
+						}
 
-							// Уведомляем о завершении загрузки всех чанков
-							for (PlayerScatterTarget target : allTargets) {
+						for (PlayerScatterTarget target : allTargets) {
 								Player player = Bukkit.getPlayer(target.playerId());
 								if (player != null && player.isOnline()) {
 									player.sendMessage(Component.text()
@@ -529,7 +498,6 @@ public class TeleportService {
 		int chunkX = location.getBlockX() >> 4;
 		int chunkZ = location.getBlockZ() >> 4;
 
-		// Обновляем ближние чанки в радиусе 5x5 вокруг игрока для немедленной визуализации
 		for (int dx = -5; dx <= 5; dx++) {
 			for (int dz = -5; dz <= 5; dz++) {
 				int cx = chunkX + dx;
@@ -538,12 +506,10 @@ public class TeleportService {
 			}
 		}
 
-		// Обновляем средние чанки в радиусе 8x8 через небольшую задержку
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			if (player.isOnline() && player.getWorld().equals(world)) {
 				for (int dx = -8; dx <= 8; dx++) {
 					for (int dz = -8; dz <= 8; dz++) {
-						// Пропускаем уже обновлённые ближние чанки
 						if (Math.abs(dx) <= 5 && Math.abs(dz) <= 5) {
 							continue;
 						}
@@ -553,14 +519,12 @@ public class TeleportService {
 					}
 				}
 			}
-		}, 5L); // 5 тиков = 0.25 секунды
+		}, 5L);
 
-		// Обновляем дальние чанки в радиусе 12x12 для полного покрытия
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			if (player.isOnline() && player.getWorld().equals(world)) {
 				for (int dx = -12; dx <= 12; dx++) {
 					for (int dz = -12; dz <= 12; dz++) {
-						// Пропускаем уже обновлённые чанки
 						if (Math.abs(dx) <= 8 && Math.abs(dz) <= 8) {
 							continue;
 						}
@@ -570,7 +534,7 @@ public class TeleportService {
 					}
 				}
 			}
-		}, 15L); // 15 тиков = 0.75 секунды
+		}, 15L);
 	}
 
 	private CompletableFuture<Void> preloadSurroundingChunks(World world, int chunkX, int chunkZ) {
@@ -666,10 +630,6 @@ public class TeleportService {
 		}, 40L);
 	}
 
-	/**
-	 * Принудительно очищает текущий bossbar, если он существует.
-	 * Используется при отмене начала игры.
-	 */
 	public void clearBossBar() {
 		if (currentBossBar != null) {
 			currentBossBar.removeAll();
@@ -678,23 +638,15 @@ public class TeleportService {
 		}
 	}
 
-	/**
-	 * Отслеживает CompletableFuture операцию для возможности её отмены.
-	 */
 	private void trackOperation(CompletableFuture<?> future) {
 		if (future != null && !future.isDone()) {
 			activeOperations.add(future);
 		}
 	}
 
-	/**
-	 * Отменяет все текущие операции телепортации и загрузки чанков.
-	 * Используется при отмене начала игры.
-	 */
 	public void cancel() {
 		cancelled = true;
 		clearBossBar();
-		// Отменяем все активные операции
 		for (CompletableFuture<?> operation : activeOperations) {
 			if (operation != null && !operation.isDone()) {
 				operation.cancel(false);

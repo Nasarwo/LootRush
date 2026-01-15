@@ -28,20 +28,17 @@ public class TimerService {
 					return;
 				}
 
-				// Вычисляем прошедшее время
 				long elapsed = System.currentTimeMillis() - gameStartTime;
 				long seconds = elapsed / 1000;
 				long minutes = seconds / 60;
 				seconds = seconds % 60;
 
-				// Форматируем время как ММ:СС
 				String timeString = String.format("%02d:%02d", minutes, seconds);
 
-				// Обновляем таймер в scoreboard
 				scoreboardService.updateTimer(timeString);
 			}
-		};
-		timerTask.runTaskTimer(plugin, 0L, 20L); // Обновляем каждую секунду
+				};
+		timerTask.runTaskTimer(plugin, 0L, 20L);
 	}
 
 	public void updateState(GameState state) {

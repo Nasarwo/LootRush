@@ -34,29 +34,22 @@ public class ItemService {
 			Material.NETHER_PORTAL,
 			Material.SUSPICIOUS_SAND,
 			Material.SUSPICIOUS_GRAVEL,
-			// Лёд и связанные блоки (требуют Silk Touch)
 			Material.ICE,
 			Material.PACKED_ICE,
 			Material.BLUE_ICE,
 			Material.FROSTED_ICE,
-			// Коконы пчёл (требуют Silk Touch)
 			Material.BEE_NEST,
-			// Большие аметистовые друзы (требуют Silk Touch)
 			Material.LARGE_AMETHYST_BUD,
 			Material.MEDIUM_AMETHYST_BUD,
 			Material.SMALL_AMETHYST_BUD,
 			Material.AMETHYST_CLUSTER,
-			// Грибные блоки (требуют Silk Touch)
 			Material.BROWN_MUSHROOM_BLOCK,
 			Material.RED_MUSHROOM_BLOCK,
 			Material.MUSHROOM_STEM,
-			// Трава и мицелий (требуют Silk Touch)
 			Material.GRASS_BLOCK,
 			Material.MYCELIUM,
 			Material.PODZOL,
-			// Снежные блоки (требуют Silk Touch)
 			Material.SNOW_BLOCK,
-			// Коралловые блоки (требуют Silk Touch)
 			Material.TUBE_CORAL_BLOCK,
 			Material.BRAIN_CORAL_BLOCK,
 			Material.BUBBLE_CORAL_BLOCK,
@@ -100,7 +93,6 @@ public class ItemService {
 
 		String name = material.name();
 
-		// Исключаем предметы, которые невозможно получить в выживании
 		if (name.startsWith("MUSIC_DISC")
 				|| name.startsWith("DISC_FRAGMENT")
 				|| name.endsWith("_SPAWN_EGG")
@@ -116,7 +108,6 @@ public class ItemService {
 				|| name.contains("SPAWNER")
 				|| name.contains("SUSPICIOUS")
 				|| name.contains("SHERD")
-				// Блоки, требующие Silk Touch
 				|| name.contains("CORAL_BLOCK")
 				|| name.equals("ICE")
 				|| name.equals("PACKED_ICE")
@@ -131,7 +122,6 @@ public class ItemService {
 				|| name.contains("MUSHROOM_STEM")
 				|| name.contains("AMETHYST_BUD")
 				|| name.equals("AMETHYST_CLUSTER")
-				// Технические блоки
 				|| name.contains("CHAIN_COMMAND_BLOCK")
 				|| name.contains("REPEATING_COMMAND_BLOCK")
 				|| name.equals("JIGSAW")

@@ -7,6 +7,9 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -38,7 +41,11 @@ public class CommandService implements TabCompleter {
 
 	public boolean execute(CommandSender sender, Command command, String label, String[] args) {
 		if (args.length == 0) {
-			sender.sendMessage("§eUsage: /" + label + " <start|stop|status|role|cancel|skip>");
+			sender.sendMessage(Component.text()
+					.append(Component.text("Использование: /", NamedTextColor.YELLOW))
+					.append(Component.text(label, NamedTextColor.GOLD))
+					.append(Component.text(" <start|stop|status|role|cancel|skip>", NamedTextColor.YELLOW))
+					.build());
 			return true;
 		}
 
@@ -62,7 +69,7 @@ public class CommandService implements TabCompleter {
 			handleSkip.accept(sender);
 			return true;
 		default:
-			sender.sendMessage("§cUnknown sub-command. Use start, stop, status, role, cancel or skip.");
+			sender.sendMessage(Component.text("Неизвестная подкоманда. Используйте: start, stop, status, role, cancel или skip.", NamedTextColor.RED));
 			return true;
 		}
 	}
@@ -83,14 +90,12 @@ public class CommandService implements TabCompleter {
 
 		if (args.length == 3 && "role".equalsIgnoreCase(args[0])) {
 			List<String> completions = new ArrayList<>();
-			// Добавляем селекторы
 			String[] selectors = {"@a", "@p", "@r", "@s", "@e[type=player]"};
 			for (String selector : selectors) {
 				if (selector.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT))) {
 					completions.add(selector);
 				}
 			}
-			// Добавляем имена онлайн игроков
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				String name = player.getName();
 				if (name.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT))) {
