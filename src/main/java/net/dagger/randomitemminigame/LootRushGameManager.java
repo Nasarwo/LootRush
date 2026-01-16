@@ -4,7 +4,9 @@ import net.dagger.randomitemminigame.game.GameState;
 import net.dagger.randomitemminigame.game.Role;
 import net.dagger.randomitemminigame.service.CommandService;
 import net.dagger.randomitemminigame.service.ItemService;
+import net.dagger.randomitemminigame.service.LanguageService;
 import net.dagger.randomitemminigame.service.LivesService;
+import net.dagger.randomitemminigame.service.Messages;
 import net.dagger.randomitemminigame.service.RoleService;
 import net.dagger.randomitemminigame.service.ScoreboardService;
 import net.dagger.randomitemminigame.service.SwapService;
@@ -39,10 +41,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-public class RandomItemGameManager implements Listener, CommandExecutor, TabCompleter {
+public class LootRushGameManager implements Listener, CommandExecutor, TabCompleter {
 	private static final int COUNTDOWN_SECONDS = 5;
 
 	private final JavaPlugin plugin;
+	private final LanguageService languageService;
 	private final RoleService roleService;
 	private final TeleportService teleportService;
 	private final SwapService swapService;
@@ -59,28 +62,32 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 	private BukkitRunnable countdownTask;
 	private BukkitRunnable monitorTask;
 
-	public RandomItemGameManager(JavaPlugin plugin) {
+	public LootRushGameManager(JavaPlugin plugin) {
 		this.plugin = plugin;
-		this.roleService = new RoleService();
+		this.languageService = new LanguageService();
+		this.roleService = new RoleService(languageService);
 		this.itemService = new ItemService();
 		this.livesService = new LivesService();
-		this.scoreboardService = new ScoreboardService();
+		this.scoreboardService = new ScoreboardService(languageService);
 		this.timerService = new TimerService(plugin, scoreboardService);
 		this.winService = new WinService(roleService);
 		this.worldService = new WorldService();
-		this.teleportService = new TeleportService(plugin, this::broadcastToParticipants);
+		this.teleportService = new TeleportService(plugin, languageService, this::broadcastToParticipants);
 		this.swapService = new SwapService(
 				plugin,
+				languageService,
 				() -> state == GameState.ACTIVE && targetItem != null,
 				this::getActiveParticipants,
 				this::broadcastToParticipants);
 		this.commandService = new CommandService(
+				languageService,
 				this::handleStart,
 				this::handleStop,
 				this::handleStatus,
 				this::handleCancel,
 				this::handleSkip,
-				args -> handleRole(args.sender, args.args));
+				args -> handleRole(args.sender, args.args),
+				args -> handleLang(args.sender, args.args));
 	}
 
 	@Override
@@ -94,8 +101,9 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 	}
 
 	private void handleStart(CommandSender sender) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (state != GameState.IDLE) {
-			sender.sendMessage(colored("Мини-игра уже запущена или идёт отсчёт.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.GAME_ALREADY_RUNNING));
 			return;
 		}
 
@@ -108,7 +116,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 				.collect(Collectors.toList());
 
 		if (participants.isEmpty()) {
-			sender.sendMessage(colored("Нет игроков, участвующих в мини-игре. Используйте /randomitem role player.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_PLAYERS));
 			return;
 		}
 
@@ -117,9 +125,18 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		roleService.prepareSpectators(spectators);
 		worldService.setWorldStateForCountdown();
 
-		broadcast(colored("=== Случайный предмет ===", NamedTextColor.GOLD));
-		broadcast(Component.text()
-				.append(colored("Нужно первым добыть: ", NamedTextColor.YELLOW))
+		broadcast(Messages.MessageKey.RANDOM_ITEM_HEADER);
+		// Отправляем сообщение с предметом на языке каждого игрока
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			LanguageService.Language playerLang = languageService.getLanguage(player);
+			player.sendMessage(Component.text()
+					.append(Messages.get(playerLang, Messages.MessageKey.NEED_TO_OBTAIN))
+					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
+					.build());
+		}
+		LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+		Bukkit.getConsoleSender().sendMessage(Component.text()
+				.append(Messages.get(defaultLang, Messages.MessageKey.NEED_TO_OBTAIN))
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 				.build());
 		playSoundForAll(Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
@@ -139,15 +156,16 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 				return;
 			}
 
-			broadcast(colored("Игроки телепортированы. Отсчёт " + COUNTDOWN_SECONDS + " сек...", NamedTextColor.GRAY));
+			broadcast(Messages.MessageKey.PLAYERS_TELEPORTED, COUNTDOWN_SECONDS);
 			winService.removeTargetItemFromPlayers(participantsSnapshot, targetItem);
 			startCountdown();
 		}));
 	}
 
 	private void handleStop(CommandSender sender) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (state == GameState.IDLE) {
-			sender.sendMessage(colored("Мини-игра и так остановлена.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.GAME_ALREADY_STOPPED));
 			return;
 		}
 
@@ -163,12 +181,13 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		state = GameState.IDLE;
 		targetItem = null;
 		worldService.setWorldStateAfterGame();
-		broadcast(colored("Мини-игра остановлена администратором.", NamedTextColor.RED));
+		broadcast(Messages.MessageKey.GAME_STOPPED);
 	}
 
 	private void handleCancel(CommandSender sender) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (state != GameState.COUNTDOWN) {
-			sender.sendMessage(colored("Нет активного отсчёта или загрузки для прерывания. Используйте /randomitem stop для остановки игры.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_COUNTDOWN));
 			return;
 		}
 
@@ -183,17 +202,18 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		state = GameState.IDLE;
 		targetItem = null;
 		worldService.setWorldStateAfterGame();
-		broadcast(colored("Начало игры прервано администратором.", NamedTextColor.RED));
+		broadcast(Messages.MessageKey.GAME_CANCELLED);
 	}
 
 	private void handleSkip(CommandSender sender) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (state != GameState.ACTIVE) {
-			sender.sendMessage(colored("Игра не активна. Пропуск предмета возможен только во время активной игры.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.GAME_NOT_ACTIVE));
 			return;
 		}
 
 		if (targetItem == null) {
-			sender.sendMessage(colored("Нет текущего предмета для пропуска.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_CURRENT_ITEM));
 			return;
 		}
 
@@ -203,49 +223,61 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		List<Player> participants = winService.getAlivePlayers();
 		winService.removeTargetItemFromPlayers(participants, targetItem);
 
-		broadcast(Component.text()
-				.append(colored("Предмет пропущен администратором. ", NamedTextColor.YELLOW))
-				.append(colored("Новый предмет: ", NamedTextColor.GOLD))
+		// Отправляем сообщение на языке каждого игрока
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			LanguageService.Language playerLang = languageService.getLanguage(player);
+			player.sendMessage(Component.text()
+					.append(Messages.get(playerLang, Messages.MessageKey.ITEM_SKIPPED))
+					.append(Messages.get(playerLang, Messages.MessageKey.NEW_ITEM))
+					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
+					.build());
+		}
+		LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+		Bukkit.getConsoleSender().sendMessage(Component.text()
+				.append(Messages.get(defaultLang, Messages.MessageKey.ITEM_SKIPPED))
+				.append(Messages.get(defaultLang, Messages.MessageKey.NEW_ITEM))
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 				.build());
 
 		sender.sendMessage(Component.text()
-				.append(colored("Предмет изменён с ", NamedTextColor.GREEN))
+				.append(Messages.get(lang, Messages.MessageKey.ITEM_CHANGED))
 				.append(formatMaterial(oldItem).color(NamedTextColor.GRAY))
-				.append(colored(" на ", NamedTextColor.GREEN))
+				.append(Messages.get(lang, Messages.MessageKey.ITEM_CHANGED_TO))
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 				.build());
 	}
 
 	private void handleStatus(CommandSender sender) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (state == GameState.IDLE) {
-			sender.sendMessage(colored("Мини-игра не запущена.", NamedTextColor.GREEN));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.GAME_NOT_STARTED));
 		} else if (state == GameState.COUNTDOWN) {
 			sender.sendMessage(Component.text()
-					.append(colored("Идёт отсчёт. Цель: ", NamedTextColor.YELLOW))
+					.append(Messages.get(lang, Messages.MessageKey.COUNTDOWN_IN_PROGRESS))
 					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 					.build());
 		} else {
 			sender.sendMessage(Component.text()
-					.append(colored("Игра активна! Цель: ", NamedTextColor.AQUA))
+					.append(Messages.get(lang, Messages.MessageKey.GAME_ACTIVE))
 					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 					.build());
 		}
 	}
 
 	private void handleRole(CommandSender sender, String[] args) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (!sender.hasPermission("randomitemminigame.admin")) {
-			sender.sendMessage(colored("Недостаточно прав для изменения ролей.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_PERMISSION_ROLE));
 			return;
 		}
 
 		if (!(sender instanceof Player) && args.length < 3) {
-			sender.sendMessage(colored("Использование: /randomitem role <player|spectator> [ник|селектор]", NamedTextColor.YELLOW));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.ROLE_USAGE));
 			return;
 		}
 
 		if (args.length < 2) {
-			sender.sendMessage(colored("Использование: /randomitem role <player|spectator> [ник|селектор]", NamedTextColor.YELLOW));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.ROLE_USAGE));
 			return;
 		}
 
@@ -256,7 +288,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		} else if ("spectator".equals(roleName)) {
 			newRole = Role.SPECTATOR;
 		} else {
-			sender.sendMessage(colored("Неизвестная роль. Доступно: player, spectator.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_ROLE));
 			return;
 		}
 
@@ -272,17 +304,17 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 						}
 					}
 					if (targets.isEmpty()) {
-						sender.sendMessage(colored("Селектор " + selector + " не нашёл игроков.", NamedTextColor.RED));
+						sender.sendMessage(Messages.get(lang, Messages.MessageKey.SELECTOR_NO_PLAYERS, selector));
 						return;
 					}
 				} catch (IllegalArgumentException e) {
-					sender.sendMessage(colored("Неверный селектор: " + e.getMessage(), NamedTextColor.RED));
+					sender.sendMessage(Messages.get(lang, Messages.MessageKey.INVALID_SELECTOR, e.getMessage()));
 					return;
 				}
 			} else {
 				Player target = Bukkit.getPlayer(selector);
 				if (target == null) {
-					sender.sendMessage(colored("Игрок " + selector + " не найден.", NamedTextColor.RED));
+					sender.sendMessage(Messages.get(lang, Messages.MessageKey.PLAYER_NOT_FOUND, selector));
 					return;
 				}
 				targets.add(target);
@@ -290,22 +322,57 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		} else if (sender instanceof Player self) {
 			targets.add(self);
 		} else {
-			sender.sendMessage(colored("Нужно указать ник игрока или селектор.", NamedTextColor.YELLOW));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NEED_PLAYER_OR_SELECTOR));
 			return;
 		}
 
 		for (Player target : targets) {
 			roleService.setRole(target, newRole);
 			if (!sender.equals(target)) {
-				target.sendMessage(colored("Администратор установил вам роль " + roleName + ".", NamedTextColor.AQUA));
+				LanguageService.Language targetLang = languageService.getLanguage(target);
+				target.sendMessage(Messages.get(targetLang, Messages.MessageKey.ROLE_SET_BY_ADMIN, roleName));
 			}
 		}
 
 		if (targets.size() == 1) {
-			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.get(0).getName() + ".", NamedTextColor.GREEN));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.ROLE_SET_SINGLE, roleName, targets.get(0).getName()));
 		} else {
-			sender.sendMessage(colored("Установлена роль " + roleName + " для " + targets.size() + " игроков.", NamedTextColor.GREEN));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.ROLE_SET_MULTIPLE, roleName, targets.size()));
 		}
+	}
+
+	private void handleLang(CommandSender sender, String[] args) {
+		LanguageService.Language lang = getLanguage(sender);
+		if (args.length < 2) {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.LANG_USAGE));
+			return;
+		}
+
+		String langCode = args[1].toLowerCase(Locale.ROOT);
+		LanguageService.Language newLang = LanguageService.Language.fromCode(langCode);
+
+		if (!langCode.equals("ru") && !langCode.equals("en")) {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_LANGUAGE));
+			return;
+		}
+
+		if (sender instanceof Player player) {
+			LanguageService.Language oldLang = languageService.getLanguage(player);
+			languageService.setLanguage(player, newLang);
+			teleportService.onPlayerLanguageChanged(player, oldLang, newLang);
+			String langName = newLang == LanguageService.Language.EN ? "English" : "Русский";
+			sender.sendMessage(Messages.get(newLang, Messages.MessageKey.LANGUAGE_SET, langName));
+		} else {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.CURRENT_LANGUAGE,
+					languageService.getDefaultLanguage().getCode()));
+		}
+	}
+
+	private LanguageService.Language getLanguage(CommandSender sender) {
+		if (sender instanceof Player player) {
+			return languageService.getLanguage(player);
+		}
+		return languageService.getDefaultLanguage();
 	}
 
 	@EventHandler
@@ -346,16 +413,17 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		}
 
 		int lives = livesService.decreaseLives(player);
+		LanguageService.Language lang = languageService.getLanguage(player);
 
 		scoreboardService.updateAllPlayersLives(livesService.getAllLives());
 
 		if (!livesService.hasLives(player)) {
 			roleService.setRole(player, Role.SPECTATOR);
 			scoreboardService.removePlayer(player);
-			player.sendMessage(colored("Вы исчерпали все жизни и теперь наблюдаете за раундом.", NamedTextColor.RED));
-			broadcastToParticipants(colored(player.getName() + " исчерпал все жизни и выбыл из игры.", NamedTextColor.GRAY));
+			player.sendMessage(Messages.get(lang, Messages.MessageKey.NO_LIVES_LEFT));
+			broadcastToParticipants(Messages.MessageKey.PLAYER_OUT, player.getName());
 		} else {
-			player.sendMessage(colored("У вас осталось жизней: " + lives + " из " + LivesService.getMaxLives(), NamedTextColor.YELLOW));
+			player.sendMessage(Messages.get(lang, Messages.MessageKey.LIVES_REMAINING, lives, LivesService.getMaxLives()));
 		}
 	}
 
@@ -368,8 +436,17 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 			@Override
 			public void run() {
 				if (secondsLeft <= 0) {
-					broadcast(Component.text()
-							.append(colored("Старт! Удачи в поисках ", NamedTextColor.GREEN))
+					// Отправляем сообщение на языке каждого игрока
+					for (Player player : Bukkit.getOnlinePlayers()) {
+						LanguageService.Language playerLang = languageService.getLanguage(player);
+						player.sendMessage(Component.text()
+								.append(Messages.get(playerLang, Messages.MessageKey.START_GOOD_LUCK))
+								.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
+								.build());
+					}
+					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+					Bukkit.getConsoleSender().sendMessage(Component.text()
+							.append(Messages.get(defaultLang, Messages.MessageKey.START_GOOD_LUCK))
 							.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 							.build());
 					state = GameState.ACTIVE;
@@ -383,7 +460,7 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 					return;
 				}
 
-				broadcast(colored("Старт через " + secondsLeft + "...", NamedTextColor.YELLOW));
+				broadcast(Messages.MessageKey.START_IN_SECONDS, secondsLeft);
 				secondsLeft--;
 			}
 		};
@@ -437,12 +514,24 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		swapService.stop();
 		livesService.clear();
 		scoreboardService.clear();
-		broadcast(Component.text()
-				.append(colored("Игрок ", NamedTextColor.GOLD))
-				.append(colored(winner.getName(), NamedTextColor.GREEN))
-				.append(colored(" первым добыл ", NamedTextColor.GOLD))
+		// Отправляем сообщение на языке каждого игрока
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			LanguageService.Language playerLang = languageService.getLanguage(player);
+			player.sendMessage(Component.text()
+					.append(Messages.get(playerLang, Messages.MessageKey.PLAYER_WON))
+					.append(Component.text(winner.getName(), NamedTextColor.GREEN))
+					.append(Messages.get(playerLang, Messages.MessageKey.OBTAINED_FIRST))
+					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
+					.append(Messages.get(playerLang, Messages.MessageKey.AND_WON))
+					.build());
+		}
+		LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+		Bukkit.getConsoleSender().sendMessage(Component.text()
+				.append(Messages.get(defaultLang, Messages.MessageKey.PLAYER_WON))
+				.append(Component.text(winner.getName(), NamedTextColor.GREEN))
+				.append(Messages.get(defaultLang, Messages.MessageKey.OBTAINED_FIRST))
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
-				.append(colored(" и победил!", NamedTextColor.GOLD))
+				.append(Messages.get(defaultLang, Messages.MessageKey.AND_WON))
 				.build());
 		resetPlayersAfterGame();
 		worldService.setWorldStateAfterGame();
@@ -467,11 +556,14 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		}
 	}
 
-	private void broadcast(Component component) {
+	private void broadcast(Messages.MessageKey key, Object... args) {
+		// Отправляем сообщение на языке каждого игрока
 		for (Player player : Bukkit.getOnlinePlayers()) {
-			player.sendMessage(component);
+			LanguageService.Language lang = languageService.getLanguage(player);
+			player.sendMessage(Messages.get(lang, key, args));
 		}
-		Bukkit.getConsoleSender().sendMessage(component);
+		LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+		Bukkit.getConsoleSender().sendMessage(Messages.get(defaultLang, key, args));
 	}
 
 	private void broadcastToParticipants(Component component) {
@@ -482,9 +574,16 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 		}
 	}
 
-	private Component colored(String content, NamedTextColor color) {
-		return Component.text(content, color);
+	private void broadcastToParticipants(Messages.MessageKey key, Object... args) {
+		// Отправляем сообщение на языке каждого участника
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			if (roleService.getRole(player) == Role.PLAYER) {
+				LanguageService.Language lang = languageService.getLanguage(player);
+				player.sendMessage(Messages.get(lang, key, args));
+			}
+		}
 	}
+
 
 
 	private void resetPlayersAfterGame() {
@@ -505,7 +604,8 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 				spawn = defaultWorld.getSpawnLocation();
 			}
 			player.teleport(spawn);
-			player.sendMessage(colored("Возвращаем на спавн и очищаем инвентарь после раунда.", NamedTextColor.GRAY));
+			LanguageService.Language lang = languageService.getLanguage(player);
+			player.sendMessage(Messages.get(lang, Messages.MessageKey.RETURNING_TO_SPAWN));
 		}
 	}
 
@@ -550,9 +650,17 @@ public class RandomItemGameManager implements Listener, CommandExecutor, TabComp
 
 		if (alivePlayers.size() == 1) {
 			Player winner = alivePlayers.get(0);
-			broadcast(Component.text("Игрок остался один в живых: ", NamedTextColor.GOLD)
+			// Отправляем сообщение на языке каждого игрока
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				LanguageService.Language playerLang = languageService.getLanguage(player);
+				player.sendMessage(Messages.get(playerLang, Messages.MessageKey.LAST_PLAYER_STANDING)
+						.append(Component.text(winner.getName(), NamedTextColor.GREEN))
+						.append(Messages.get(playerLang, Messages.MessageKey.WINS_ROUND)));
+			}
+			LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+			Bukkit.getConsoleSender().sendMessage(Messages.get(defaultLang, Messages.MessageKey.LAST_PLAYER_STANDING)
 					.append(Component.text(winner.getName(), NamedTextColor.GREEN))
-					.append(Component.text(" и выигрывает раунд!", NamedTextColor.GOLD)));
+					.append(Messages.get(defaultLang, Messages.MessageKey.WINS_ROUND)));
 			endGameWithWinner(winner);
 		}
 	}

@@ -35,9 +35,10 @@ public class TeleportService {
 	private static final int MIN_PLAYER_DISTANCE = 10000;
 	private static final int SAFE_LOCATION_ATTEMPTS = 256;
 	private final JavaPlugin plugin;
+	private final LanguageService languageService;
 	private final Consumer<Component> participantBroadcast;
 	private final Random random = new Random();
-	private BossBar currentBossBar = null;
+	private final Map<LanguageService.Language, BossBar> currentBossBars = new HashMap<>();
 	private volatile boolean cancelled = false;
 	private final List<CompletableFuture<?>> activeOperations = new CopyOnWriteArrayList<>();
 
@@ -61,8 +62,9 @@ public class TeleportService {
 			Material.WITHER_ROSE
 	);
 
-	public TeleportService(JavaPlugin plugin, Consumer<Component> participantBroadcast) {
+	public TeleportService(JavaPlugin plugin, LanguageService languageService, Consumer<Component> participantBroadcast) {
 		this.plugin = plugin;
+		this.languageService = languageService;
 		this.participantBroadcast = participantBroadcast;
 	}
 
@@ -76,25 +78,31 @@ public class TeleportService {
 		}
 		activeOperations.clear();
 		cancelled = false;
-		BossBar scatterBar = createScatterBossBar(players, players.size());
-		currentBossBar = scatterBar;
-		CompletableFuture<Void> mainFuture = teleportPlayers(players, scatterBar);
+		Map<LanguageService.Language, BossBar> scatterBars = createScatterBossBar(players, players.size());
+		currentBossBars.putAll(scatterBars);
+		CompletableFuture<Void> mainFuture = teleportPlayers(players, scatterBars);
 		trackOperation(mainFuture);
 		return mainFuture.whenComplete((ignored, throwable) -> {
-			hideScatterBossBar(scatterBar, throwable == null && !cancelled);
-			if (currentBossBar == scatterBar) {
-				currentBossBar = null;
+			hideScatterBossBar(scatterBars, throwable == null && !cancelled);
+			if (currentBossBars.equals(scatterBars)) {
+				currentBossBars.clear();
+			} else {
+				for (BossBar bar : scatterBars.values()) {
+					if (currentBossBars.containsValue(bar)) {
+						currentBossBars.values().remove(bar);
+					}
+				}
 			}
 			activeOperations.remove(mainFuture);
 		});
 	}
 
-	private CompletableFuture<Void> teleportPlayers(List<Player> players, BossBar scatterBar) {
+	private CompletableFuture<Void> teleportPlayers(List<Player> players, Map<LanguageService.Language, BossBar> scatterBars) {
 		if (players.isEmpty() || cancelled) {
 			return CompletableFuture.completedFuture(null);
 		}
 
-		CompletableFuture<List<PlayerScatterTarget>> targetsFuture = prepareScatterTargets(players, new ArrayList<>(), 0, scatterBar);
+		CompletableFuture<List<PlayerScatterTarget>> targetsFuture = prepareScatterTargets(players, new ArrayList<>(), 0, scatterBars);
 		trackOperation(targetsFuture);
 		return targetsFuture.thenCompose(targets -> {
 			if (cancelled) {
@@ -110,7 +118,8 @@ public class TeleportService {
 				for (PlayerScatterTarget target : targetsList) {
 					Player player = Bukkit.getPlayer(target.playerId());
 					if (player != null && player.isOnline()) {
-						player.sendMessage(Component.text("Загружаем чанки для телепортации...", NamedTextColor.YELLOW));
+						LanguageService.Language lang = languageService.getLanguage(player);
+						player.sendMessage(Messages.get(lang, Messages.MessageKey.LOADING_CHUNKS));
 					}
 				}
 			});
@@ -128,7 +137,7 @@ public class TeleportService {
 						continue;
 					}
 
-					plugin.getLogger().info(String.format("[RandomItem] Teleporting %s to %.1f %.1f %.1f",
+					plugin.getLogger().info(String.format("[LootRush] Teleporting %s to %.1f %.1f %.1f",
 							player.getName(), target.location().getX(), target.location().getY(), target.location().getZ()));
 					player.teleport(target.location());
 					player.getInventory().clear();
@@ -151,7 +160,8 @@ public class TeleportService {
 						}
 					}, 1L);
 
-					player.sendMessage(Component.text("Вы телепортированы в " + formatLocation(target.location()), NamedTextColor.GRAY));
+					LanguageService.Language lang = languageService.getLanguage(player);
+					player.sendMessage(Messages.get(lang, Messages.MessageKey.TELEPORTED_TO, formatLocation(target.location())));
 				}
 			})).whenComplete((ignored, throwable) -> {
 				activeOperations.remove(chunksFuture);
@@ -162,19 +172,22 @@ public class TeleportService {
 	}
 
 	private CompletableFuture<List<PlayerScatterTarget>> prepareScatterTargets(List<Player> players, List<PlayerScatterTarget> accumulator, int index,
-			BossBar scatterBar) {
+			Map<LanguageService.Language, BossBar> scatterBars) {
 		if (cancelled || index >= players.size()) {
 			return CompletableFuture.completedFuture(new ArrayList<>(accumulator));
 		}
 
 		Player player = players.get(index);
-		participantBroadcast.accept(Component.text("Ищем место для " + player.getName() + "...", NamedTextColor.YELLOW));
-		updateScatterBossBar(scatterBar, accumulator.size(), players.size(), player.getName(), true);
+		for (Player participant : players) {
+			LanguageService.Language participantLang = languageService.getLanguage(participant);
+			participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.SEARCHING_LOCATION, player.getName()));
+		}
+		updateScatterBossBar(scatterBars, accumulator.size(), players.size(), player.getName(), true);
 		List<Location> existingLocations = accumulator.stream()
 				.map(PlayerScatterTarget::location)
 				.toList();
 
-		CompletableFuture<Location> locationFuture = findRandomLocationAsync(player.getWorld(), existingLocations, player.getName());
+		CompletableFuture<Location> locationFuture = findRandomLocationAsync(player.getWorld(), existingLocations, player.getName(), players);
 		trackOperation(locationFuture);
 		return locationFuture.thenCompose(location -> {
 			if (cancelled) {
@@ -182,10 +195,13 @@ public class TeleportService {
 				return CompletableFuture.completedFuture(new ArrayList<>(accumulator));
 			}
 
-			participantBroadcast.accept(Component.text("Нашли место для " + player.getName() + ": " + formatLocation(location), NamedTextColor.GREEN));
+			for (Player participant : players) {
+				LanguageService.Language participantLang = languageService.getLanguage(participant);
+				participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND, player.getName(), formatLocation(location)));
+			}
 			accumulator.add(new PlayerScatterTarget(player.getUniqueId(), location));
-			updateScatterBossBar(scatterBar, accumulator.size(), players.size(), player.getName(), false);
-			CompletableFuture<List<PlayerScatterTarget>> nextFuture = prepareScatterTargets(players, accumulator, index + 1, scatterBar);
+			updateScatterBossBar(scatterBars, accumulator.size(), players.size(), player.getName(), false);
+			CompletableFuture<List<PlayerScatterTarget>> nextFuture = prepareScatterTargets(players, accumulator, index + 1, scatterBars);
 			nextFuture.whenComplete((ignored, throwable) -> {
 				activeOperations.remove(locationFuture);
 			});
@@ -193,15 +209,15 @@ public class TeleportService {
 		});
 	}
 
-	private CompletableFuture<Location> findRandomLocationAsync(World world, List<Location> existingLocations, String playerName) {
+	private CompletableFuture<Location> findRandomLocationAsync(World world, List<Location> existingLocations, String playerName, List<Player> participants) {
 		CompletableFuture<Location> future = new CompletableFuture<>();
 		trackOperation(future);
-		findRandomLocationAttempt(world, existingLocations, future, 0, playerName);
+		findRandomLocationAttempt(world, existingLocations, future, 0, playerName, participants);
 		return future;
 	}
 
 	private void findRandomLocationAttempt(World world, List<Location> existingLocations, CompletableFuture<Location> future, int attempt,
-			String playerName) {
+			String playerName, List<Player> participants) {
 		if (cancelled || future.isDone()) {
 			if (cancelled && !future.isDone()) {
 				Bukkit.getScheduler().runTask(plugin, () -> future.cancel(false));
@@ -224,11 +240,15 @@ public class TeleportService {
 		int z = randomCoordinate();
 
 		if (!isFarEnough(x, z, world, existingLocations)) {
-			if (!cancelled) {
-				participantBroadcast.accept(Component.text("Попытка #" + (attempt + 1) + " для " + playerName + ": ("
-						+ x + ", ???, " + z + ") слишком близко к другим игрокам", NamedTextColor.GRAY));
+			if (!cancelled && participants != null) {
+				for (Player participant : participants) {
+					if (participant != null && participant.isOnline()) {
+						LanguageService.Language participantLang = languageService.getLanguage(participant);
+						participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_TOO_CLOSE, attempt + 1, playerName, x, z));
+					}
+				}
 			}
-			findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName);
+			findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName, participants);
 			return;
 		}
 
@@ -249,10 +269,19 @@ public class TeleportService {
 
 				int floorY = world.getHighestBlockYAt(x, z);
 				if (floorY <= world.getMinHeight()) {
-					String message = String.format("Попытка #%d для %s: (%d, %d) отклонена — Y ниже минимума", attempt + 1, playerName, x, z);
-					plugin.getLogger().info("[RandomItem] " + message);
-					participantBroadcast.accept(Component.text(message, NamedTextColor.GRAY));
-					findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName);
+					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_Y_TOO_LOW, attempt + 1, playerName, x, z);
+					plugin.getLogger().info("[LootRush] " + message);
+					if (participants != null) {
+						// Отправляем сообщение на языке каждого участника
+						for (Player participant : participants) {
+							if (participant != null && participant.isOnline()) {
+								LanguageService.Language participantLang = languageService.getLanguage(participant);
+								participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_Y_TOO_LOW, attempt + 1, playerName, x, z));
+							}
+						}
+					}
+					findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName, participants);
 					return;
 				}
 
@@ -262,11 +291,17 @@ public class TeleportService {
 				Block head = world.getBlockAt(x, feetY + 1, z);
 
 				if (isSafeFloor(floor) && isPassable(feet) && isPassable(head)) {
-					String message = String.format("Попытка #%d для %s: найдена точка (%d, %d, %d)",
-							attempt + 1, playerName, x, feetY, z);
-					plugin.getLogger().info("[RandomItem] " + message + " на блоке " + floor.getType());
-					if (!cancelled) {
-						participantBroadcast.accept(Component.text(message, NamedTextColor.GREEN));
+					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z);
+					plugin.getLogger().info("[LootRush] " + message + " on block " + floor.getType());
+					if (!cancelled && participants != null) {
+						// Отправляем сообщение на языке каждого участника
+						for (Player participant : participants) {
+							if (participant != null && participant.isOnline()) {
+								LanguageService.Language participantLang = languageService.getLanguage(participant);
+								participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z));
+							}
+						}
 					}
 					Location finalLocation = new Location(world, x + 0.5, feetY, z + 0.5);
 					preloadSurroundingChunks(world, chunkX, chunkZ).whenComplete((ignored, ex) -> {
@@ -285,22 +320,35 @@ public class TeleportService {
 						}
 					});
 				} else {
-					String message = String.format("Попытка #%d для %s: (%d, %d, %d) отклонена — блоки небезопасны (floor=%s, feet=%s, head=%s)",
-							attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType());
-					plugin.getLogger().info("[RandomItem] " + message);
-					if (!cancelled) {
-						participantBroadcast.accept(Component.text(message, NamedTextColor.GRAY));
+					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType());
+					plugin.getLogger().info("[LootRush] " + message);
+					if (!cancelled && participants != null) {
+						// Отправляем сообщение на языке каждого участника
+						for (Player participant : participants) {
+							if (participant != null && participant.isOnline()) {
+								LanguageService.Language participantLang = languageService.getLanguage(participant);
+								participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType()));
+							}
+						}
 					}
-					findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName);
+					findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName, participants);
 				}
 			});
 		}).exceptionally(ex -> {
 			if (!cancelled) {
 				plugin.getLogger().warning("Ошибка загрузки чанка для телепорта: " + ex.getMessage());
-				participantBroadcast.accept(Component.text("Ошибка при прогрузке чанка: " + ex.getMessage(), NamedTextColor.RED));
+				if (participants != null) {
+					for (Player participant : participants) {
+						if (participant != null && participant.isOnline()) {
+							LanguageService.Language participantLang = languageService.getLanguage(participant);
+							participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.CHUNK_LOAD_ERROR, ex.getMessage()));
+						}
+					}
+				}
 			}
 			if (!cancelled && !future.isDone()) {
-				findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName);
+				findRandomLocationAttempt(world, existingLocations, future, attempt + 1, playerName, participants);
 			}
 			return null;
 		});
@@ -356,10 +404,11 @@ public class TeleportService {
 			for (PlayerScatterTarget target : allTargets) {
 				Player player = Bukkit.getPlayer(target.playerId());
 				if (player != null && player.isOnline()) {
+					LanguageService.Language playerLang = languageService.getLanguage(player);
 					player.sendMessage(Component.text()
-							.append(Component.text("Загружаем ближние чанки: ", NamedTextColor.YELLOW))
+							.append(Messages.get(playerLang, Messages.MessageKey.LOADING_NEAR_CHUNKS))
 							.append(Component.text(totalNearChunks, NamedTextColor.AQUA))
-							.append(Component.text(" чанков...", NamedTextColor.YELLOW))
+							.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
 							.build());
 				}
 			}
@@ -382,11 +431,8 @@ public class TeleportService {
 								for (PlayerScatterTarget target : allTargets) {
 									Player player = Bukkit.getPlayer(target.playerId());
 									if (player != null && player.isOnline()) {
-										player.sendMessage(Component.text()
-												.append(Component.text("Загружен чанк ", NamedTextColor.GRAY))
-												.append(Component.text("[" + chunkX + ", " + chunkZ + "]", NamedTextColor.AQUA))
-												.append(Component.text(" (" + nearChunkCounter[0] + "/" + totalNearChunks + ")", NamedTextColor.YELLOW))
-												.build());
+										LanguageService.Language playerLang = languageService.getLanguage(player);
+										player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, nearChunkCounter[0], totalNearChunks));
 									}
 								}
 							}
@@ -416,11 +462,12 @@ public class TeleportService {
 					for (PlayerScatterTarget target : allTargets) {
 						Player player = Bukkit.getPlayer(target.playerId());
 						if (player != null && player.isOnline()) {
+							LanguageService.Language playerLang = languageService.getLanguage(player);
 							player.sendMessage(Component.text()
-									.append(Component.text("Ближние чанки загружены! ", NamedTextColor.GREEN))
-									.append(Component.text("Загружаем дальние чанки: ", NamedTextColor.YELLOW))
+									.append(Messages.get(playerLang, Messages.MessageKey.NEAR_CHUNKS_LOADED))
+									.append(Messages.get(playerLang, Messages.MessageKey.LOADING_FAR_CHUNKS))
 									.append(Component.text(totalFarChunks, NamedTextColor.AQUA))
-									.append(Component.text(" чанков...", NamedTextColor.YELLOW))
+									.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
 									.build());
 						}
 					}
@@ -448,11 +495,8 @@ public class TeleportService {
 										for (PlayerScatterTarget target : allTargets) {
 											Player player = Bukkit.getPlayer(target.playerId());
 											if (player != null && player.isOnline()) {
-												player.sendMessage(Component.text()
-														.append(Component.text("Загружен чанк ", NamedTextColor.GRAY))
-														.append(Component.text("[" + chunkX + ", " + chunkZ + "]", NamedTextColor.AQUA))
-														.append(Component.text(" (" + farChunkCounter[0] + "/" + totalFarChunks + ")", NamedTextColor.YELLOW))
-														.build());
+												LanguageService.Language playerLang = languageService.getLanguage(player);
+												player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, farChunkCounter[0], totalFarChunks));
 											}
 										}
 									}
@@ -482,9 +526,10 @@ public class TeleportService {
 						for (PlayerScatterTarget target : allTargets) {
 								Player player = Bukkit.getPlayer(target.playerId());
 								if (player != null && player.isOnline()) {
+									LanguageService.Language playerLang = languageService.getLanguage(player);
 									player.sendMessage(Component.text()
-											.append(Component.text("Все чанки загружены! ", NamedTextColor.GREEN))
-											.append(Component.text("(" + totalChunks + " чанков)", NamedTextColor.GRAY))
+											.append(Messages.get(playerLang, Messages.MessageKey.ALL_CHUNKS_LOADED))
+											.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_COUNT, totalChunks))
 											.build());
 								}
 							}
@@ -594,48 +639,90 @@ public class TeleportService {
 		return true;
 	}
 
-	private BossBar createScatterBossBar(Collection<? extends Player> viewers, int totalPlayers) {
-		BossBar bossBar = Bukkit.createBossBar("Поиск безопасных локаций... 0/" + totalPlayers, BarColor.BLUE, BarStyle.SOLID);
-		bossBar.setProgress(totalPlayers == 0 ? 1.0 : 0.0);
-		for (Player viewer : viewers) {
-			bossBar.addPlayer(viewer);
+	private Map<LanguageService.Language, BossBar> createScatterBossBar(Collection<? extends Player> viewers, int totalPlayers) {
+		Map<LanguageService.Language, BossBar> bars = new HashMap<>();
+
+		for (LanguageService.Language lang : LanguageService.Language.values()) {
+			String title = Messages.getString(lang, Messages.MessageKey.SCATTER_BOSS_BAR, 0, totalPlayers);
+			BossBar bossBar = Bukkit.createBossBar(title, BarColor.BLUE, BarStyle.SOLID);
+			bossBar.setProgress(totalPlayers == 0 ? 1.0 : 0.0);
+			bossBar.setVisible(true);
+			bars.put(lang, bossBar);
 		}
-		bossBar.setVisible(true);
-		return bossBar;
+
+		for (Player viewer : viewers) {
+			LanguageService.Language lang = languageService.getLanguage(viewer);
+			BossBar bar = bars.get(lang);
+			if (bar != null) {
+				bar.addPlayer(viewer);
+			}
+		}
+		return bars;
 	}
 
-	private void updateScatterBossBar(BossBar bossBar, int ready, int total, String playerName, boolean searching) {
-		if (bossBar == null || total <= 0) {
+	private void updateScatterBossBar(Map<LanguageService.Language, BossBar> bossBars, int ready, int total, String playerName, boolean searching) {
+		if (bossBars == null || total <= 0) {
 			return;
 		}
 
 		double progress = Math.min(1.0, Math.max(0.0, (double) ready / total));
-		bossBar.setProgress(progress);
 
-		String status = (searching ? "Ищем место для " : "Готово для ") + playerName + " • " + ready + "/" + total;
-		bossBar.setTitle(status);
+		for (Map.Entry<LanguageService.Language, BossBar> entry : bossBars.entrySet()) {
+			BossBar bossBar = entry.getValue();
+			bossBar.setProgress(progress);
+			String status = Messages.getString(entry.getKey(), Messages.MessageKey.SCATTER_BOSS_BAR, ready, total);
+			bossBar.setTitle(status);
+		}
 	}
 
-	private void hideScatterBossBar(BossBar bossBar, boolean success) {
-		if (bossBar == null) {
+	private void hideScatterBossBar(Map<LanguageService.Language, BossBar> bossBars, boolean success) {
+		if (bossBars == null) {
 			return;
 		}
 
-		bossBar.setProgress(success ? 1.0 : bossBar.getProgress());
-		bossBar.setTitle(success ? "Телепортация завершена" : "Телепортация остановлена");
+		for (Map.Entry<LanguageService.Language, BossBar> entry : bossBars.entrySet()) {
+			BossBar bossBar = entry.getValue();
+			bossBar.setProgress(success ? 1.0 : bossBar.getProgress());
+			String title = success ? Messages.getString(entry.getKey(), Messages.MessageKey.TELEPORTATION_COMPLETE)
+					: Messages.getString(entry.getKey(), Messages.MessageKey.TELEPORTATION_STOPPED);
+			bossBar.setTitle(title);
+		}
 
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
-			bossBar.removeAll();
-			bossBar.setVisible(false);
+			for (BossBar bossBar : bossBars.values()) {
+				bossBar.removeAll();
+				bossBar.setVisible(false);
+			}
 		}, 40L);
 	}
 
 	public void clearBossBar() {
-		if (currentBossBar != null) {
-			currentBossBar.removeAll();
-			currentBossBar.setVisible(false);
-			currentBossBar = null;
+		for (BossBar bossBar : currentBossBars.values()) {
+			bossBar.removeAll();
+			bossBar.setVisible(false);
 		}
+		currentBossBars.clear();
+	}
+
+	public void onPlayerLanguageChanged(Player player, LanguageService.Language oldLang, LanguageService.Language newLang) {
+		if (player == null || oldLang == null || newLang == null || oldLang == newLang || currentBossBars.isEmpty()) {
+			return;
+		}
+
+		BossBar oldBar = currentBossBars.get(oldLang);
+		BossBar newBar = currentBossBars.get(newLang);
+		if (oldBar == null && newBar == null) {
+			return;
+		}
+
+		Bukkit.getScheduler().runTask(plugin, () -> {
+			if (oldBar != null) {
+				oldBar.removePlayer(player);
+			}
+			if (newBar != null) {
+				newBar.addPlayer(player);
+			}
+		});
 	}
 
 	private void trackOperation(CompletableFuture<?> future) {

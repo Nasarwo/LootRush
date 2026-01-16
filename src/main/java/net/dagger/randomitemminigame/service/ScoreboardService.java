@@ -1,5 +1,6 @@
 package net.dagger.randomitemminigame.service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,39 +16,55 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 
 public class ScoreboardService {
-	private Scoreboard gameScoreboard;
-	private Objective livesObjective;
-	private String lastTimerKey = null;
+	private final LanguageService languageService;
+	private final Map<UUID, Scoreboard> playerScoreboards = new HashMap<>();
+	private final Map<UUID, Objective> playerObjectives = new HashMap<>();
+	private final Map<UUID, String> lastTimerKeys = new HashMap<>();
+
+	public ScoreboardService(LanguageService languageService) {
+		this.languageService = languageService;
+	}
 
 	public void createScoreboard(Map<UUID, Integer> playerLives) {
-		gameScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-		livesObjective = gameScoreboard.registerNewObjective("lives", Criteria.DUMMY, Component.text("Жизни", NamedTextColor.RED));
-		livesObjective.setDisplaySlot(DisplaySlot.SIDEBAR);
+		clear();
 
 		for (UUID playerId : playerLives.keySet()) {
 			Player player = Bukkit.getPlayer(playerId);
 			if (player != null && player.isOnline()) {
-				player.setScoreboard(gameScoreboard);
-				updatePlayerLives(player, playerLives.get(playerId));
+				createPlayerScoreboard(player, playerLives.get(playerId));
 			}
 		}
 	}
 
+	private void createPlayerScoreboard(Player player, int lives) {
+		Scoreboard scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+		LanguageService.Language playerLang = languageService.getLanguage(player);
+		Objective objective = scoreboard.registerNewObjective("lives", Criteria.DUMMY,
+				Messages.get(playerLang, Messages.MessageKey.LIVES));
+		objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+		playerScoreboards.put(player.getUniqueId(), scoreboard);
+		playerObjectives.put(player.getUniqueId(), objective);
+
+		updatePlayerLives(player, lives);
+	}
+
 	public void updatePlayerLives(Player player, int lives) {
-		if (livesObjective == null || gameScoreboard == null) {
+		UUID playerId = player.getUniqueId();
+		Objective objective = playerObjectives.get(playerId);
+		if (objective == null) {
 			return;
 		}
 
 		String playerName = player.getName();
-		livesObjective.getScore(playerName).setScore(lives);
-		player.setScoreboard(gameScoreboard);
+		objective.getScore(playerName).setScore(lives);
+		Scoreboard scoreboard = playerScoreboards.get(playerId);
+		if (scoreboard != null) {
+			player.setScoreboard(scoreboard);
+		}
 	}
 
 	public void updateAllPlayersLives(Map<UUID, Integer> playerLives) {
-		if (livesObjective == null || gameScoreboard == null) {
-			return;
-		}
-
 		for (UUID playerId : playerLives.keySet()) {
 			Player player = Bukkit.getPlayer(playerId);
 			if (player != null && player.isOnline()) {
@@ -58,55 +75,83 @@ public class ScoreboardService {
 	}
 
 	public void updateTimer(String timeString) {
-		if (livesObjective == null || gameScoreboard == null) {
-			return;
-		}
-
-		if (lastTimerKey != null) {
-			gameScoreboard.resetScores(lastTimerKey);
-		}
-
-		Component timerComponent = Component.text()
-				.append(Component.text("Время: ", NamedTextColor.GOLD))
-				.append(Component.text(timeString, NamedTextColor.YELLOW))
-				.build();
-		lastTimerKey = LegacyComponentSerializer.legacySection().serialize(timerComponent);
-		livesObjective.getScore(lastTimerKey).setScore(999);
-
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			if (player.getScoreboard().equals(gameScoreboard)) {
-				player.setScoreboard(gameScoreboard);
+		for (UUID playerId : playerScoreboards.keySet()) {
+			Player player = Bukkit.getPlayer(playerId);
+			if (player == null || !player.isOnline()) {
+				continue;
 			}
+
+			Objective objective = playerObjectives.get(playerId);
+			Scoreboard scoreboard = playerScoreboards.get(playerId);
+			if (objective == null || scoreboard == null) {
+				continue;
+			}
+
+			String lastTimerKey = lastTimerKeys.get(playerId);
+			if (lastTimerKey != null) {
+				scoreboard.resetScores(lastTimerKey);
+			}
+
+			LanguageService.Language playerLang = languageService.getLanguage(player);
+			Component timerComponent = Component.text()
+					.append(Messages.get(playerLang, Messages.MessageKey.TIME))
+					.append(Component.text(timeString, NamedTextColor.YELLOW))
+					.build();
+			String timerKey = LegacyComponentSerializer.legacySection().serialize(timerComponent);
+			lastTimerKeys.put(playerId, timerKey);
+			objective.getScore(timerKey).setScore(999);
+
+			player.setScoreboard(scoreboard);
 		}
 	}
 
 	public void removePlayer(Player player) {
-		if (gameScoreboard != null && livesObjective != null) {
-			gameScoreboard.resetScores(player.getName());
-			player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+		UUID playerId = player.getUniqueId();
+		Scoreboard scoreboard = playerScoreboards.remove(playerId);
+		Objective objective = playerObjectives.remove(playerId);
+		lastTimerKeys.remove(playerId);
+
+		if (scoreboard != null && objective != null) {
+			scoreboard.resetScores(player.getName());
+			String timerKey = lastTimerKeys.get(playerId);
+			if (timerKey != null) {
+				scoreboard.resetScores(timerKey);
+			}
+			objective.unregister();
 		}
+
+		player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
 	}
 
 	public void clear() {
-		if (gameScoreboard != null) {
-			if (lastTimerKey != null) {
-				gameScoreboard.resetScores(lastTimerKey);
-				lastTimerKey = null;
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			UUID playerId = player.getUniqueId();
+			if (playerScoreboards.containsKey(playerId)) {
+				removePlayer(player);
 			}
-			for (Player player : Bukkit.getOnlinePlayers()) {
-				if (player.getScoreboard().equals(gameScoreboard)) {
-					player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+		}
+
+		for (UUID playerId : new HashMap<>(playerScoreboards).keySet()) {
+			Player player = Bukkit.getPlayer(playerId);
+			if (player == null || !player.isOnline()) {
+				Scoreboard scoreboard = playerScoreboards.remove(playerId);
+				Objective objective = playerObjectives.remove(playerId);
+				lastTimerKeys.remove(playerId);
+				if (scoreboard != null && objective != null) {
+					objective.unregister();
 				}
 			}
-			if (livesObjective != null) {
-				livesObjective.unregister();
-				livesObjective = null;
-			}
-			gameScoreboard = null;
 		}
+
+		playerScoreboards.clear();
+		playerObjectives.clear();
+		lastTimerKeys.clear();
 	}
 
 	public Scoreboard getScoreboard() {
-		return gameScoreboard;
+		if (!playerScoreboards.isEmpty()) {
+			return playerScoreboards.values().iterator().next();
+		}
+		return null;
 	}
 }

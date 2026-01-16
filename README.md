@@ -1,4 +1,4 @@
-# RandomItemMinigame
+# LootRush
 
 ---
 
@@ -8,17 +8,17 @@ A mini-game for Minecraft servers based on Paper 1.21, where players compete to 
 
 ### Main Features
 
-- 🎯 **Random Item** — the system automatically selects an item from the pool of available items
-- 👥 **Role System** — support for player and spectator roles
-- ❤️ **Lives System** — each player has 5 lives, loses one life upon death
-- 🔄 **Random Teleportations** — players randomly swap positions every 5 minutes (first teleportation after 4:50)
-- 🌍 **Safe Teleportation** — automatic search for safe locations for players
-- 🛡️ **Damage Protection** — players receive invincibility for 10 seconds after teleportation
+- **Random Item** — the system automatically selects an item from the pool of available items
+- **Role System** — support for player and spectator roles
+- **Lives System** — each player has 5 lives, loses one life upon death
+- **Random Teleportations** — players randomly swap positions every 5 minutes (first teleportation after 4:50)
+- **Safe Teleportation** — automatic search for safe locations for players
+- **Damage Protection** — players receive invincibility for 10 seconds after teleportation
 
 ### Installation
 
-1. Download the latest version of the plugin
-2. Place the `plugin.jar` file in your server's `plugins` folder
+1. Download the latest version of the plugin from Releases
+2. Place the `LootRush.jar` file in your server's `plugins` folder
 3. Restart the server
 4. The plugin is ready to use!
 
@@ -30,40 +30,40 @@ A mini-game for Minecraft servers based on Paper 1.21, where players compete to 
 
 ### Commands
 
-#### `/randomitem` (or `/rim`)
+#### `/lootrush` (or `/lr`)
 
 Main command for managing the mini-game.
 
 ##### Subcommands:
 
-- `/randomitem start` — starts a new game
+- `/lootrush start` — starts a new game
 
   - Teleports all players with the "player" role to random locations
   - Selects a random item
   - Starts a 5-second countdown
 
-- `/randomitem stop` — stops the current game
+- `/lootrush stop` — stops the current game
 
   - Clears all game data
   - Returns players to spawn
   - Clears inventories
 
-- `/randomitem cancel` — cancels countdown or loading
+- `/lootrush cancel` — cancels countdown or loading
 
   - Used to interrupt the game start process
   - Cancels all teleportation operations and chunk loading
 
-- `/randomitem status` — shows the current game status
+- `/lootrush status` — shows the current game status
 
   - Shows current state (IDLE, COUNTDOWN, ACTIVE)
   - Shows the current target item
 
-- `/randomitem skip` — skips the current item (only during active game)
+- `/lootrush skip` — skips the current item (only during active game)
 
   - Selects a new random item
   - Removes the old item from players' inventories
 
-- `/randomitem role <player|spectator> [player|selector]` — changes a player's role
+- `/lootrush role <player|spectator> [player|selector]` — changes a player's role
   - `player` — player participates in the mini-game
   - `spectator` — player watches the game
   - If role is not specified, the command applies to the executor (players only)
@@ -71,7 +71,7 @@ Main command for managing the mini-game.
 
 ##### Permissions
 
-- `randomitemminigame.admin` — permission for all commands (default: operators only)
+- `lootrush.admin` — permission for all commands (default: operators only)
 
 ### Usage
 
@@ -80,13 +80,13 @@ Main command for managing the mini-game.
 1. Set player roles:
 
    ```
-   /randomitem role player @a
+   /lootrush role player @a
    ```
 
 2. Start the game:
 
    ```
-   /randomitem start
+   /lootrush start
    ```
 
 3. Players will be teleported to random locations and the countdown will begin
@@ -98,19 +98,19 @@ Main command for managing the mini-game.
 **Set spectator role for a specific player:**
 
 ```
-/randomitem role spectator Notch
+/lootrush role spectator Notch
 ```
 
 **Set player role for everyone:**
 
 ```
-/randomitem role player @a
+/lootrush role player @a
 ```
 
 **Stop the game:**
 
 ```
-/randomitem stop
+/lootrush stop
 ```
 
 ### Game Mechanics
@@ -150,13 +150,7 @@ This project is created for personal use. All rights reserved.
 
 ### Author
 
-**Nasarwo (DaGGeR)**
-
-### Version
-
-Current version: **1.0.0**
-
----
+## **Nasarwo (DaGGeR)**
 
 For questions and suggestions, please create an issue in the project repository.
 
@@ -168,17 +162,17 @@ For questions and suggestions, please create an issue in the project repository.
 
 ### Основные функции
 
-- 🎯 **Случайный предмет** — система автоматически выбирает предмет из пула доступных предметов
-- 👥 **Система ролей** — поддержка ролей игрока и наблюдателя
-- ❤️ **Система жизней** — каждый игрок имеет 5 жизней, после смерти теряет одну жизнь
-- 🔄 **Случайные телепортации** — игроки случайно меняются местами каждые 5 минут (первая телепортация через 4:50)
-- 🌍 **Безопасная телепортация** — автоматический поиск безопасных локаций для игроков
-- 🛡️ **Защита от урона** — игроки получают неуязвимость на 10 секунд после телепортации
+- **Случайный предмет** — система автоматически выбирает предмет из пула доступных предметов
+- **Система ролей** — поддержка ролей игрока и наблюдателя
+- **Система жизней** — каждый игрок имеет 5 жизней, после смерти теряет одну жизнь
+- **Случайные телепортации** — игроки случайно меняются местами каждые 5 минут (первая телепортация через 4:50)
+- **Безопасная телепортация** — автоматический поиск безопасных локаций для игроков
+- **Защита от урона** — игроки получают неуязвимость на 10 секунд после телепортации
 
 ### Установка
 
-1. Скачайте последнюю версию плагина
-2. Поместите файл `plugin.jar` в папку `plugins` вашего сервера
+1. Скачайте последнюю версию плагина из Releases
+2. Поместите файл `LootRush.jar` в папку `plugins` вашего сервера
 3. Перезапустите сервер
 4. Плагин готов к использованию!
 
@@ -190,40 +184,40 @@ For questions and suggestions, please create an issue in the project repository.
 
 ### Команды
 
-#### `/randomitem` (или `/rim`)
+#### `/lootrush` (или `/lr`)
 
 Основная команда для управления мини-игрой.
 
 ##### Подкоманды:
 
-- `/randomitem start` — запускает новую игру
+- `/lootrush start` — запускает новую игру
 
   - Телепортирует всех игроков с ролью "player" на случайные локации
   - Выбирает случайный предмет
   - Начинает отсчёт 5 секунд
 
-- `/randomitem stop` — останавливает текущую игру
+- `/lootrush stop` — останавливает текущую игру
 
   - Очищает все данные игры
   - Возвращает игроков на спавн
   - Очищает инвентари
 
-- `/randomitem cancel` — отменяет отсчёт или загрузку
+- `/lootrush cancel` — отменяет отсчёт или загрузку
 
   - Используется для прерывания процесса начала игры
   - Отменяет все операции телепортации и загрузки чанков
 
-- `/randomitem status` — показывает текущий статус игры
+- `/lootrush status` — показывает текущий статус игры
 
   - Показывает текущее состояние (IDLE, COUNTDOWN, ACTIVE)
   - Показывает текущий целевой предмет
 
-- `/randomitem skip` — пропускает текущий предмет (только во время активной игры)
+- `/lootrush skip` — пропускает текущий предмет (только во время активной игры)
 
   - Выбирает новый случайный предмет
   - Удаляет старый предмет из инвентарей игроков
 
-- `/randomitem role <player|spectator> [игрок|селектор]` — изменяет роль игрока
+- `/lootrush role <player|spectator> [игрок|селектор]` — изменяет роль игрока
   - `player` — игрок участвует в мини-игре
   - `spectator` — игрок наблюдает за игрой
   - Если роль не указана, команда применяется к исполнителю (только для игроков)
@@ -231,7 +225,7 @@ For questions and suggestions, please create an issue in the project repository.
 
 ##### Разрешения
 
-- `randomitemminigame.admin` — разрешение для всех команд (по умолчанию только для операторов)
+- `lootrush.admin` — разрешение для всех команд (по умолчанию только для операторов)
 
 ### Использование
 
@@ -240,13 +234,13 @@ For questions and suggestions, please create an issue in the project repository.
 1. Установите роли игрокам:
 
    ```
-   /randomitem role player @a
+   /lootrush role player @a
    ```
 
 2. Запустите игру:
 
    ```
-   /randomitem start
+   /lootrush start
    ```
 
 3. Игроки будут телепортированы на случайные локации, и начнётся отсчёт
@@ -258,19 +252,19 @@ For questions and suggestions, please create an issue in the project repository.
 **Установить роль наблюдателя для конкретного игрока:**
 
 ```
-/randomitem role spectator Notch
+/lootrush role spectator Notch
 ```
 
 **Установить роль игрока для всех:**
 
 ```
-/randomitem role player @a
+/lootrush role player @a
 ```
 
 **Остановить игру:**
 
 ```
-/randomitem stop
+/lootrush stop
 ```
 
 ### Механика игры
@@ -310,11 +304,7 @@ For questions and suggestions, please create an issue in the project repository.
 
 ### Автор
 
-**Nasarwo (DaGGeR)**
-
-### Версия
-
-Текущая версия: **1.0.0**
+## **Nasarwo (DaGGeR)**
 
 ---
 

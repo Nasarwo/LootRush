@@ -7,9 +7,6 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,35 +14,38 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 public class CommandService implements TabCompleter {
+	private final LanguageService languageService;
 	private final Consumer<CommandSender> handleStart;
 	private final Consumer<CommandSender> handleStop;
 	private final Consumer<CommandSender> handleStatus;
 	private final Consumer<CommandSender> handleCancel;
 	private final Consumer<CommandSender> handleSkip;
 	private final Consumer<CommandSenderAndArgs> handleRole;
+	private final Consumer<CommandSenderAndArgs> handleLang;
 
 	public CommandService(
+			LanguageService languageService,
 			Consumer<CommandSender> handleStart,
 			Consumer<CommandSender> handleStop,
 			Consumer<CommandSender> handleStatus,
 			Consumer<CommandSender> handleCancel,
 			Consumer<CommandSender> handleSkip,
-			Consumer<CommandSenderAndArgs> handleRole) {
+			Consumer<CommandSenderAndArgs> handleRole,
+			Consumer<CommandSenderAndArgs> handleLang) {
+		this.languageService = languageService;
 		this.handleStart = handleStart;
 		this.handleStop = handleStop;
 		this.handleStatus = handleStatus;
 		this.handleCancel = handleCancel;
 		this.handleSkip = handleSkip;
 		this.handleRole = handleRole;
+		this.handleLang = handleLang;
 	}
 
 	public boolean execute(CommandSender sender, Command command, String label, String[] args) {
+		LanguageService.Language lang = getLanguage(sender);
 		if (args.length == 0) {
-			sender.sendMessage(Component.text()
-					.append(Component.text("Использование: /", NamedTextColor.YELLOW))
-					.append(Component.text(label, NamedTextColor.GOLD))
-					.append(Component.text(" <start|stop|status|role|cancel|skip>", NamedTextColor.YELLOW))
-					.build());
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.USAGE));
 			return true;
 		}
 
@@ -68,17 +68,33 @@ public class CommandService implements TabCompleter {
 		case "skip":
 			handleSkip.accept(sender);
 			return true;
+		case "lang":
+			handleLang.accept(new CommandSenderAndArgs(sender, args));
+			return true;
 		default:
-			sender.sendMessage(Component.text("Неизвестная подкоманда. Используйте: start, stop, status, role, cancel или skip.", NamedTextColor.RED));
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_SUBCOMMAND));
 			return true;
 		}
+	}
+
+	private LanguageService.Language getLanguage(CommandSender sender) {
+		if (sender instanceof Player player) {
+			return languageService.getLanguage(player);
+		}
+		return languageService.getDefaultLanguage();
 	}
 
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("start", "stop", "status", "role", "cancel", "skip").stream()
+			return Arrays.asList("start", "stop", "status", "role", "cancel", "skip", "lang").stream()
 					.filter(option -> option.startsWith(args[0].toLowerCase(Locale.ROOT)))
+					.collect(Collectors.toList());
+		}
+
+		if (args.length == 2 && "lang".equalsIgnoreCase(args[0])) {
+			return Arrays.asList("ru", "en").stream()
+					.filter(option -> option.startsWith(args[1].toLowerCase(Locale.ROOT)))
 					.collect(Collectors.toList());
 		}
 

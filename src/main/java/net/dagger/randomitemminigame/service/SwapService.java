@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -25,6 +24,7 @@ public class SwapService {
 	private static final int SWAP_COUNTDOWN_SECONDS = 10;
 
 	private final JavaPlugin plugin;
+	private final LanguageService languageService;
 	private final Supplier<Boolean> canSwapSupplier;
 	private final Supplier<List<Player>> participantsSupplier;
 	private final Consumer<Component> participantBroadcast;
@@ -32,10 +32,12 @@ public class SwapService {
 	private BukkitRunnable task;
 
 	public SwapService(JavaPlugin plugin,
+			LanguageService languageService,
 			Supplier<Boolean> canSwapSupplier,
 			Supplier<List<Player>> participantsSupplier,
 			Consumer<Component> participantBroadcast) {
 		this.plugin = plugin;
+		this.languageService = languageService;
 		this.canSwapSupplier = canSwapSupplier;
 		this.participantsSupplier = participantsSupplier;
 		this.participantBroadcast = participantBroadcast;
@@ -61,10 +63,11 @@ public class SwapService {
 				}
 
 				if (countdown >= 0) {
+					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
 					if (countdown == SWAP_COUNTDOWN_SECONDS) {
-						participantBroadcast.accept(Component.text("Случайная смена мест через " + countdown + " секунд!", NamedTextColor.LIGHT_PURPLE));
+						participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_SECONDS, countdown));
 					} else if (countdown > 0) {
-						participantBroadcast.accept(Component.text("Смена мест через " + countdown + " секунд.", NamedTextColor.LIGHT_PURPLE));
+						participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_SECONDS_SHORT, countdown));
 					} else {
 						performSwap(participants);
 						countdown = -1;
@@ -78,15 +81,16 @@ public class SwapService {
 				ticksUntilSwap -= 20;
 
 				int secondsUntilSwap = ticksUntilSwap / 20;
+				LanguageService.Language defaultLang = languageService.getDefaultLanguage();
 				if (secondsUntilSwap == 60) {
-					participantBroadcast.accept(Component.text("Случайная смена мест через 1 минуту!", NamedTextColor.YELLOW));
+					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_MINUTE));
 				} else if (secondsUntilSwap == 30) {
-					participantBroadcast.accept(Component.text("Случайная смена мест через 30 секунд!", NamedTextColor.YELLOW));
+					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_30_SECONDS));
 				}
 
 				if (ticksUntilSwap <= 0) {
 					countdown = SWAP_COUNTDOWN_SECONDS;
-					participantBroadcast.accept(Component.text("Случайная смена мест начнётся через " + SWAP_COUNTDOWN_SECONDS + " секунд!", NamedTextColor.LIGHT_PURPLE));
+					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_STARTING, SWAP_COUNTDOWN_SECONDS));
 				}
 			}
 		};
@@ -101,7 +105,8 @@ public class SwapService {
 	}
 
 	private void performSwap(List<Player> participants) {
-		participantBroadcast.accept(Component.text("Игроки меняются местами!", NamedTextColor.LIGHT_PURPLE));
+		LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+		participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.PLAYERS_SWAPPING));
 
 		Map<Player, Location> playerLocations = new HashMap<>();
 		Map<Player, Location> playerRespawnLocations = new HashMap<>();

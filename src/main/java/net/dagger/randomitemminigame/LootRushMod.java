@@ -6,22 +6,22 @@ import org.bukkit.Server;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class RandomItemMinigameMod extends JavaPlugin {
+public class LootRushMod extends JavaPlugin {
 	public static JavaPlugin plugin;
 	public static Server server;
 
-	private RandomItemGameManager gameManager;
+	private LootRushGameManager gameManager;
 
 	@Override
 	public void onEnable() {
 		plugin = this;
 		server = this.getServer();
 
-		gameManager = new RandomItemGameManager(this);
+		gameManager = new LootRushGameManager(this);
 		getServer().getPluginManager().registerEvents(gameManager, this);
 
-		PluginCommand command = Objects.requireNonNull(getCommand("randomitem"),
-				"Command randomitem is not defined in plugin.yml");
+		PluginCommand command = Objects.requireNonNull(getCommand("lootrush"),
+				"Command lootrush is not defined in plugin.yml");
 		command.setExecutor(gameManager);
 		command.setTabCompleter(gameManager);
 	}
