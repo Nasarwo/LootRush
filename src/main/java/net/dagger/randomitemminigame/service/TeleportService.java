@@ -275,7 +275,6 @@ public class TeleportService {
 					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_Y_TOO_LOW, attempt + 1, playerName, x, z);
 					plugin.getLogger().info("[LootRush] " + message);
 					if (participants != null) {
-						// Отправляем сообщение на языке каждого участника
 						for (Player participant : participants) {
 							if (participant != null && participant.isOnline()) {
 								LanguageService.Language participantLang = languageService.getLanguage(participant);
@@ -297,7 +296,6 @@ public class TeleportService {
 					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z);
 					plugin.getLogger().info("[LootRush] " + message + " on block " + floor.getType());
 					if (!cancelled && participants != null) {
-						// Отправляем сообщение на языке каждого участника
 						for (Player participant : participants) {
 							if (participant != null && participant.isOnline()) {
 								LanguageService.Language participantLang = languageService.getLanguage(participant);
@@ -326,7 +324,6 @@ public class TeleportService {
 					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType());
 					plugin.getLogger().info("[LootRush] " + message);
 					if (!cancelled && participants != null) {
-						// Отправляем сообщение на языке каждого участника
 						for (Player participant : participants) {
 							if (participant != null && participant.isOnline()) {
 								LanguageService.Language participantLang = languageService.getLanguage(participant);

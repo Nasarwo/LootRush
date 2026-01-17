@@ -127,7 +127,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		worldService.setWorldStateForCountdown();
 
 		broadcast(Messages.MessageKey.RANDOM_ITEM_HEADER);
-		// Отправляем сообщение с предметом на языке каждого игрока
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			LanguageService.Language playerLang = languageService.getLanguage(player);
 			player.sendMessage(Component.text()
@@ -224,7 +223,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		List<Player> participants = winService.getAlivePlayers();
 		winService.removeTargetItemFromPlayers(participants, targetItem);
 
-		// Отправляем сообщение на языке каждого игрока
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			LanguageService.Language playerLang = languageService.getLanguage(player);
 			player.sendMessage(Component.text()
@@ -444,7 +442,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			@Override
 			public void run() {
 				if (secondsLeft <= 0) {
-					// Отправляем сообщение на языке каждого игрока
 					for (Player player : Bukkit.getOnlinePlayers()) {
 						LanguageService.Language playerLang = languageService.getLanguage(player);
 						player.sendMessage(Component.text()
@@ -522,7 +519,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		swapService.stop();
 		livesService.clear();
 		scoreboardService.clear();
-		// Отправляем сообщение на языке каждого игрока
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			LanguageService.Language playerLang = languageService.getLanguage(player);
 			player.sendMessage(Component.text()
@@ -565,7 +561,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	}
 
 	private void broadcast(Messages.MessageKey key, Object... args) {
-		// Отправляем сообщение на языке каждого игрока
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			LanguageService.Language lang = languageService.getLanguage(player);
 			player.sendMessage(Messages.get(lang, key, args));
@@ -583,7 +578,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	}
 
 	private void broadcastToParticipants(Messages.MessageKey key, Object... args) {
-		// Отправляем сообщение на языке каждого участника
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			if (roleService.getRole(player) == Role.PLAYER) {
 				LanguageService.Language lang = languageService.getLanguage(player);
@@ -658,7 +652,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 
 		if (alivePlayers.size() == 1) {
 			Player winner = alivePlayers.get(0);
-			// Отправляем сообщение на языке каждого игрока
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				LanguageService.Language playerLang = languageService.getLanguage(player);
 				player.sendMessage(Messages.get(playerLang, Messages.MessageKey.LAST_PLAYER_STANDING)

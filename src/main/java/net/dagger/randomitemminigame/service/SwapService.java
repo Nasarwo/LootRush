@@ -44,7 +44,6 @@ public class SwapService {
 		this.participantBroadcast = participantBroadcast;
 
 		this.swapIntervalTicks = swapIntervalSeconds * 20;
-		// Initial delay is interval minus countdown duration
 		this.firstSwapDelayTicks = (swapIntervalSeconds - SWAP_COUNTDOWN_SECONDS) * 20;
 	}
 
@@ -62,7 +61,6 @@ public class SwapService {
 
 				List<Player> participants = participantsSupplier.get();
 				if (participants.size() < 2) {
-					// Reset timer if not enough players, but keep counting if game is active
 					ticksUntilSwap = firstSwapDelayTicks;
 					countdown = -1;
 					return;
@@ -77,7 +75,6 @@ public class SwapService {
 					} else {
 						performSwap(participants);
 						countdown = -1;
-						// Next swap in exactly interval minus countdown duration
 						ticksUntilSwap = swapIntervalTicks - (SWAP_COUNTDOWN_SECONDS * 20);
 						return;
 					}
@@ -90,7 +87,6 @@ public class SwapService {
 				int secondsUntilSwap = ticksUntilSwap / 20;
 				LanguageService.Language defaultLang = languageService.getDefaultLanguage();
 
-				// +10 seconds because countdown starts when ticksUntilSwap hits 0
 				int realTimeUntilSwap = secondsUntilSwap + SWAP_COUNTDOWN_SECONDS;
 
 				if (realTimeUntilSwap == 60) {
@@ -101,7 +97,6 @@ public class SwapService {
 
 				if (ticksUntilSwap <= 0) {
 					countdown = SWAP_COUNTDOWN_SECONDS;
-					// Don't broadcast here, countdown block handles it
 				}
 			}
 		};
@@ -140,9 +135,6 @@ public class SwapService {
 			Location targetRespawnLocation = playerRespawnLocations.get(targetPlayer);
 
 			currentPlayer.teleport(targetLocation);
-			// currentPlayer.getInventory().clear();
-			// currentPlayer.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
-			// currentPlayer.getInventory().setItemInOffHand(null);
 			currentPlayer.setRespawnLocation(targetRespawnLocation, true);
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
 				if (currentPlayer.isOnline()) {
