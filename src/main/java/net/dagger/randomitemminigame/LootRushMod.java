@@ -18,8 +18,14 @@ public class LootRushMod extends JavaPlugin {
 		server = this.getServer();
 
 		saveDefaultConfig();
+		reloadConfig();
 
-		gameManager = new LootRushGameManager(this, getConfig().getStringList("banned-items"));
+		gameManager = new LootRushGameManager(
+				this,
+				getConfig().getStringList("banned-items"),
+				getConfig().getInt("swap-interval-seconds", 300),
+				getConfig().getInt("scatter-min-coord", 10000),
+				getConfig().getInt("scatter-max-coord", 100000));
 		getServer().getPluginManager().registerEvents(gameManager, this);
 
 		PluginCommand command = Objects.requireNonNull(getCommand("lootrush"),

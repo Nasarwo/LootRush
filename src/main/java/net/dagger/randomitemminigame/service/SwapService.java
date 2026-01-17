@@ -19,8 +19,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class SwapService {
-	private static final int SWAP_INTERVAL_TICKS = 5 * 60 * 20;
-	private static final int FIRST_SWAP_TICKS = (4 * 60 + 50) * 20;
+	private final int swapIntervalTicks;
+	private final int firstSwapDelayTicks;
 	private static final int SWAP_COUNTDOWN_SECONDS = 10;
 
 	private final JavaPlugin plugin;
@@ -35,18 +35,23 @@ public class SwapService {
 			LanguageService languageService,
 			Supplier<Boolean> canSwapSupplier,
 			Supplier<List<Player>> participantsSupplier,
-			Consumer<Component> participantBroadcast) {
+			Consumer<Component> participantBroadcast,
+			int swapIntervalSeconds) {
 		this.plugin = plugin;
 		this.languageService = languageService;
 		this.canSwapSupplier = canSwapSupplier;
 		this.participantsSupplier = participantsSupplier;
 		this.participantBroadcast = participantBroadcast;
+
+		this.swapIntervalTicks = swapIntervalSeconds * 20;
+		// Initial delay is interval minus countdown duration
+		this.firstSwapDelayTicks = (swapIntervalSeconds - SWAP_COUNTDOWN_SECONDS) * 20;
 	}
 
 	public void start() {
 		stop();
 		task = new BukkitRunnable() {
-			private int ticksUntilSwap = FIRST_SWAP_TICKS;
+			private int ticksUntilSwap = firstSwapDelayTicks;
 			private int countdown = -1;
 
 			@Override
@@ -57,7 +62,8 @@ public class SwapService {
 
 				List<Player> participants = participantsSupplier.get();
 				if (participants.size() < 2) {
-					ticksUntilSwap = FIRST_SWAP_TICKS;
+					// Reset timer if not enough players, but keep counting if game is active
+					ticksUntilSwap = firstSwapDelayTicks;
 					countdown = -1;
 					return;
 				}
@@ -71,7 +77,8 @@ public class SwapService {
 					} else {
 						performSwap(participants);
 						countdown = -1;
-						ticksUntilSwap = SWAP_INTERVAL_TICKS;
+						// Next swap in exactly interval minus countdown duration
+						ticksUntilSwap = swapIntervalTicks - (SWAP_COUNTDOWN_SECONDS * 20);
 						return;
 					}
 					countdown--;
@@ -82,15 +89,19 @@ public class SwapService {
 
 				int secondsUntilSwap = ticksUntilSwap / 20;
 				LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-				if (secondsUntilSwap == 60) {
+
+				// +10 seconds because countdown starts when ticksUntilSwap hits 0
+				int realTimeUntilSwap = secondsUntilSwap + SWAP_COUNTDOWN_SECONDS;
+
+				if (realTimeUntilSwap == 60) {
 					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_MINUTE));
-				} else if (secondsUntilSwap == 30) {
+				} else if (realTimeUntilSwap == 30) {
 					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_30_SECONDS));
 				}
 
 				if (ticksUntilSwap <= 0) {
 					countdown = SWAP_COUNTDOWN_SECONDS;
-					participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_STARTING, SWAP_COUNTDOWN_SECONDS));
+					// Don't broadcast here, countdown block handles it
 				}
 			}
 		};
@@ -129,9 +140,9 @@ public class SwapService {
 			Location targetRespawnLocation = playerRespawnLocations.get(targetPlayer);
 
 			currentPlayer.teleport(targetLocation);
-			currentPlayer.getInventory().clear();
-			currentPlayer.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
-			currentPlayer.getInventory().setItemInOffHand(null);
+			// currentPlayer.getInventory().clear();
+			// currentPlayer.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
+			// currentPlayer.getInventory().setItemInOffHand(null);
 			currentPlayer.setRespawnLocation(targetRespawnLocation, true);
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
 				if (currentPlayer.isOnline()) {
@@ -142,7 +153,7 @@ public class SwapService {
 							currentPlayer.setInvulnerable(false);
 							currentPlayer.setNoDamageTicks(20);
 						}
-					}, 200L);
+					}, 500L);
 				}
 			}, 1L);
 			currentPlayer.playSound(targetLocation, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.MASTER, 1.0f, 1.0f);

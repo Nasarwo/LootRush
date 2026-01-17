@@ -30,8 +30,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class TeleportService {
-	private static final int MIN_SCATTER_COORD = 10000;
-	private static final int MAX_SCATTER_COORD = 100000;
+	private final int minScatterCoord;
+	private final int maxScatterCoord;
 	private static final int MIN_PLAYER_DISTANCE = 10000;
 	private static final int SAFE_LOCATION_ATTEMPTS = 256;
 	private final JavaPlugin plugin;
@@ -62,10 +62,12 @@ public class TeleportService {
 			Material.WITHER_ROSE
 	);
 
-	public TeleportService(JavaPlugin plugin, LanguageService languageService, Consumer<Component> participantBroadcast) {
+	public TeleportService(JavaPlugin plugin, LanguageService languageService, Consumer<Component> participantBroadcast, int minScatterCoord, int maxScatterCoord) {
 		this.plugin = plugin;
 		this.languageService = languageService;
 		this.participantBroadcast = participantBroadcast;
+		this.minScatterCoord = minScatterCoord;
+		this.maxScatterCoord = maxScatterCoord;
 	}
 
 	public CompletableFuture<Void> scatterPlayers(List<Player> players) {
@@ -156,7 +158,7 @@ public class TeleportService {
 									player.setInvulnerable(false);
 									player.setNoDamageTicks(20);
 								}
-							}, 200L);
+							}, 500L);
 						}
 					}, 1L);
 
@@ -255,9 +257,9 @@ public class TeleportService {
 		int chunkX = x >> 4;
 		int chunkZ = z >> 4;
 
-		preloadSurroundingChunks(world, chunkX, chunkZ);
-
-		world.getChunkAtAsyncUrgently(chunkX, chunkZ).thenAccept(chunk -> {
+		preloadSurroundingChunks(world, chunkX, chunkZ).thenCompose(ignore ->
+				world.getChunkAtAsyncUrgently(chunkX, chunkZ)
+		).thenAccept(chunk -> {
 			if (cancelled || future.isDone()) {
 				return;
 			}
@@ -619,8 +621,9 @@ public class TeleportService {
 	}
 
 	private int randomCoordinate() {
-		int range = MAX_SCATTER_COORD - MIN_SCATTER_COORD;
-		int base = MIN_SCATTER_COORD + random.nextInt(range + 1);
+		int range = maxScatterCoord - minScatterCoord;
+		if (range <= 0) range = 1;
+		int base = minScatterCoord + random.nextInt(range + 1);
 		return random.nextBoolean() ? base : -base;
 	}
 

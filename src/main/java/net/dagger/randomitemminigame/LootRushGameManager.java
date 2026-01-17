@@ -62,7 +62,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	private BukkitRunnable countdownTask;
 	private BukkitRunnable monitorTask;
 
-	public LootRushGameManager(JavaPlugin plugin, List<String> bannedItems) {
+	public LootRushGameManager(JavaPlugin plugin, List<String> bannedItems, int swapIntervalSeconds, int minScatterCoord, int maxScatterCoord) {
 		this.plugin = plugin;
 		this.languageService = new LanguageService();
 		this.roleService = new RoleService(languageService);
@@ -72,13 +72,14 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		this.timerService = new TimerService(plugin, scoreboardService);
 		this.winService = new WinService(roleService);
 		this.worldService = new WorldService();
-		this.teleportService = new TeleportService(plugin, languageService, this::broadcastToParticipants);
+		this.teleportService = new TeleportService(plugin, languageService, this::broadcastToParticipants, minScatterCoord, maxScatterCoord);
 		this.swapService = new SwapService(
 				plugin,
 				languageService,
 				() -> state == GameState.ACTIVE && targetItem != null,
 				this::getActiveParticipants,
-				this::broadcastToParticipants);
+				this::broadcastToParticipants,
+				swapIntervalSeconds);
 		this.commandService = new CommandService(
 				languageService,
 				this::handleStart,
