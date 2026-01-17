@@ -2,6 +2,9 @@ plugins {
 	id "java"
 }
 
+version = "1.2.0"
+group = "net.dagger.randomitemminigame"
+
 base.archivesName = "plugin"
 
 def toolsDir = layout.projectDirectory.dir("build/tools")

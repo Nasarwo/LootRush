@@ -10,7 +10,8 @@ import org.bukkit.entity.Player;
 public class LanguageService {
 	public enum Language {
 		RU("ru"),
-		EN("en");
+		EN("en"),
+		UK("uk");
 
 		private final String code;
 
@@ -29,6 +30,9 @@ public class LanguageService {
 			String lowerCode = code.toLowerCase(Locale.ROOT);
 			if ("en".equals(lowerCode) || "english".equals(lowerCode)) {
 				return EN;
+			}
+			if ("uk".equals(lowerCode) || "ukrainian".equals(lowerCode) || "ua".equals(lowerCode)) {
+				return UK;
 			}
 			return RU;
 		}

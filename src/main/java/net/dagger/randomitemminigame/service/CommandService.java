@@ -93,7 +93,7 @@ public class CommandService implements TabCompleter {
 		}
 
 		if (args.length == 2 && "lang".equalsIgnoreCase(args[0])) {
-			return Arrays.asList("ru", "en").stream()
+			return Arrays.asList("ru", "en", "uk", "ua").stream()
 					.filter(option -> option.startsWith(args[1].toLowerCase(Locale.ROOT)))
 					.collect(Collectors.toList());
 		}

@@ -62,11 +62,11 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	private BukkitRunnable countdownTask;
 	private BukkitRunnable monitorTask;
 
-	public LootRushGameManager(JavaPlugin plugin) {
+	public LootRushGameManager(JavaPlugin plugin, List<String> bannedItems) {
 		this.plugin = plugin;
 		this.languageService = new LanguageService();
 		this.roleService = new RoleService(languageService);
-		this.itemService = new ItemService();
+		this.itemService = new ItemService(bannedItems);
 		this.livesService = new LivesService();
 		this.scoreboardService = new ScoreboardService(languageService);
 		this.timerService = new TimerService(plugin, scoreboardService);
@@ -351,7 +351,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		String langCode = args[1].toLowerCase(Locale.ROOT);
 		LanguageService.Language newLang = LanguageService.Language.fromCode(langCode);
 
-		if (!langCode.equals("ru") && !langCode.equals("en")) {
+		if (!langCode.equals("ru") && !langCode.equals("en") && !langCode.equals("uk") && !langCode.equals("ua")) {
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_LANGUAGE));
 			return;
 		}
@@ -360,7 +360,14 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			LanguageService.Language oldLang = languageService.getLanguage(player);
 			languageService.setLanguage(player, newLang);
 			teleportService.onPlayerLanguageChanged(player, oldLang, newLang);
-			String langName = newLang == LanguageService.Language.EN ? "English" : "Русский";
+			String langName;
+			if (newLang == LanguageService.Language.EN) {
+				langName = "English";
+			} else if (newLang == LanguageService.Language.UK) {
+				langName = "Українська";
+			} else {
+				langName = "Русский";
+			}
 			sender.sendMessage(Messages.get(newLang, Messages.MessageKey.LANGUAGE_SET, langName));
 		} else {
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.CURRENT_LANGUAGE,

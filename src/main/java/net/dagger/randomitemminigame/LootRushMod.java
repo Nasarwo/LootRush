@@ -17,7 +17,9 @@ public class LootRushMod extends JavaPlugin {
 		plugin = this;
 		server = this.getServer();
 
-		gameManager = new LootRushGameManager(this);
+		saveDefaultConfig();
+
+		gameManager = new LootRushGameManager(this, getConfig().getStringList("banned-items"));
 		getServer().getPluginManager().registerEvents(gameManager, this);
 
 		PluginCommand command = Objects.requireNonNull(getCommand("lootrush"),

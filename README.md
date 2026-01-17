@@ -14,6 +14,7 @@ A mini-game for Minecraft servers based on Paper 1.21, where players compete to 
 - **Random Teleportations** - players randomly swap positions every 5 minutes (first teleportation after 4:50)
 - **Safe Teleportation** - automatic search for safe locations for players
 - **Damage Protection** - players receive invincibility for 10 seconds after teleportation
+- **Multi-language Support** - available in English, Russian, and Ukrainian
 
 ### Installation
 
@@ -21,6 +22,23 @@ A mini-game for Minecraft servers based on Paper 1.21, where players compete to 
 2. Place the `LootRush.jar` file in your server's `plugins` folder
 3. Restart the server
 4. The plugin is ready to use!
+
+### Configuration
+
+The plugin generates a `config.yml` file in the `plugins/LootRush` folder.
+You can configure the list of banned items that will not be selected as targets.
+
+```yaml
+# Configuration for LootRush
+# banned-items: List of items that should not appear in the game.
+# You can use exact item names (e.g. BEDROCK) or regex patterns starting with "REGEX:"
+
+banned-items:
+  - BEDROCK
+  - BARRIER
+  - REGEX:.*_SPAWN_EGG
+  # ... and others
+```
 
 ### Requirements
 
@@ -69,6 +87,11 @@ Main command for managing the mini-game.
   - If role is not specified, the command applies to the executor (players only)
   - Supports Minecraft selectors (@a, @p, @r, @s, @e[type=player])
 
+- `/lootrush lang <en|ru|uk>` - changes language
+  - `en` - English
+  - `ru` - Russian
+  - `uk` (or `ua`) - Ukrainian
+
 ##### Permissions
 
 - `lootrush.admin` - permission for all commands (default: operators only)
@@ -107,6 +130,12 @@ Main command for managing the mini-game.
 /lootrush role player @a
 ```
 
+**Change language to Ukrainian:**
+
+```
+/lootrush lang uk
+```
+
 **Stop the game:**
 
 ```
@@ -136,8 +165,7 @@ The plugin automatically filters items, excluding:
 
 - Items that cannot be obtained in survival mode
 - Technical blocks (command blocks, barriers, etc.)
-- Items that require Silk Touch to obtain as a block
-- Items available only in creative mode
+- Items configured in `config.yml`
 
 ### Known Limitations
 
@@ -168,6 +196,7 @@ For questions and suggestions, please create an issue in the project repository.
 - **Случайные телепортации** - игроки случайно меняются местами каждые 5 минут (первая телепортация через 4:50)
 - **Безопасная телепортация** - автоматический поиск безопасных локаций для игроков
 - **Защита от урона** - игроки получают неуязвимость на 10 секунд после телепортации
+- **Мультиязычность** - поддержка русского, английского и украинского языков
 
 ### Установка
 
@@ -175,6 +204,23 @@ For questions and suggestions, please create an issue in the project repository.
 2. Поместите файл `LootRush.jar` в папку `plugins` вашего сервера
 3. Перезапустите сервер
 4. Плагин готов к использованию!
+
+### Конфигурация
+
+Плагин создает файл `config.yml` в папке `plugins/LootRush`.
+Вы можете настроить список запрещенных предметов, которые не будут выбираться в качестве цели.
+
+```yaml
+# Конфигурация LootRush
+# banned-items: Список предметов, которые не должны появляться в игре.
+# Можно использовать точные названия (например, BEDROCK) или регулярные выражения, начинающиеся с "REGEX:"
+
+banned-items:
+  - BEDROCK
+  - BARRIER
+  - REGEX:.*_SPAWN_EGG
+  # ... и другие
+```
 
 ### Требования
 
@@ -223,6 +269,11 @@ For questions and suggestions, please create an issue in the project repository.
   - Если роль не указана, команда применяется к исполнителю (только для игроков)
   - Поддерживает селекторы Minecraft (@a, @p, @r, @s, @e[type=player])
 
+- `/lootrush lang <ru|en|uk>` - изменяет язык
+  - `ru` - Русский
+  - `en` - Английский
+  - `uk` (или `ua`) - Украинский
+
 ##### Разрешения
 
 - `lootrush.admin` - разрешение для всех команд (по умолчанию только для операторов)
@@ -247,7 +298,7 @@ For questions and suggestions, please create an issue in the project repository.
 
 4. Первый игрок, который добудет целевой предмет, побеждает!
 
-### Примеры использования
+#### Примеры использования
 
 **Установить роль наблюдателя для конкретного игрока:**
 
@@ -259,6 +310,12 @@ For questions and suggestions, please create an issue in the project repository.
 
 ```
 /lootrush role player @a
+```
+
+**Сменить язык на украинский:**
+
+```
+/lootrush lang ua
 ```
 
 **Остановить игру:**
@@ -290,8 +347,7 @@ For questions and suggestions, please create an issue in the project repository.
 
 - Предметы, которые невозможно получить в выживании
 - Технические блоки (командные блоки, барьеры и т.д.)
-- Предметы, требующие Silk Touch для получения в виде блока
-- Предметы, доступные только в творческом режиме
+- Предметы, настроенные в `config.yml`
 
 ### Известные ограничения
 
@@ -305,7 +361,5 @@ For questions and suggestions, please create an issue in the project repository.
 ### Автор
 
 ## **Nasarwo (DaGGeR)**
-
----
 
 Для вопросов и предложений создайте issue в репозитории проекта.
