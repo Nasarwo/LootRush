@@ -134,7 +134,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		worldService.setWorldStateForLoading();
 		worldService.setSafetyBorder();
 
-		// Teleport to spawn and clear inventory for safety during loading
 		for (Player player : online) {
 			player.teleport(player.getWorld().getSpawnLocation());
 			player.getInventory().clear();
@@ -245,7 +244,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		targetItem = itemService.pickRandomItem();
 		gameInfoService.updateTargetItem(targetItem);
 
-		// Remove the new target item from all participants if they already have it
 		List<Player> participants = winService.getAlivePlayers();
 		winService.removeTargetItemFromPlayers(participants, targetItem);
 
@@ -264,10 +262,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 				.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 				.build());
 
-		// Force the monitor task to check immediately in case someone already picked it up or logic needs update
 		if (monitorTask != null && !monitorTask.isCancelled()) {
-			// Optional: Trigger an immediate check if needed, but the periodic task handles it.
-			// Just ensuring state is consistent.
 		}
 	}
 
@@ -441,8 +436,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			return;
 		}
 
-		// Only restrict movement after teleportation (when countdownTask is running),
-		// not during loading (when players are in spawn box)
 		if (countdownTask == null) {
 			return;
 		}
@@ -451,7 +444,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			Location from = event.getFrom();
 			Location to = event.getTo();
 
-			// Allow looking around, but prevent movement
 			if (to.getX() != from.getX() || to.getY() != from.getY() || to.getZ() != from.getZ()) {
 				event.setTo(new Location(from.getWorld(), from.getX(), from.getY(), from.getZ(), to.getYaw(), to.getPitch()));
 			}

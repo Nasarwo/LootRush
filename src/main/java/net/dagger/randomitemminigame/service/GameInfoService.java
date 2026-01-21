@@ -21,7 +21,7 @@ public class GameInfoService {
 	}
 
 	public void showTargetItem(Material item) {
-		hide(); // Clean up previous bars
+		hide();
 		this.currentItem = item;
 
 		for (LanguageService.Language lang : LanguageService.Language.values()) {
@@ -82,7 +82,7 @@ public class GameInfoService {
 
 	public void updateTargetItem(Material newItem) {
 		if (this.currentItem == null) {
-			return; // Game not active or bar not shown
+			return;
 		}
 		this.currentItem = newItem;
 

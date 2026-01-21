@@ -25,7 +25,7 @@ public class WorldService {
 	public void setSafetyBorder() {
 		for (World world : Bukkit.getWorlds()) {
 			world.getWorldBorder().setCenter(world.getSpawnLocation());
-			world.getWorldBorder().setSize(96); // 48 blocks in all directions = diameter 96
+			world.getWorldBorder().setSize(96);
 		}
 	}
 

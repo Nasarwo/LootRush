@@ -33,6 +33,15 @@ You can configure the list of banned items that will not be selected as targets.
 # banned-items: List of items that should not appear in the game.
 # You can use exact item names (e.g. BEDROCK) or regex patterns starting with "REGEX:"
 
+# swap-interval-seconds: Interval between player substitutions in seconds (default 300 seconds = 5 minutes)
+swap-interval-seconds: 300
+
+# scatter-min-coord: Min coord for teleportation (default 10000)
+scatter-min-coord: 10000
+
+# scatter-max-coord: Max coord for teleportation (default 100000)
+scatter-max-coord: 100000
+
 banned-items:
   - BEDROCK
   - BARRIER
@@ -56,41 +65,41 @@ Main command for managing the mini-game.
 
 - `/lootrush start` - starts a new game
 
-  - Teleports all players with the "player" role to random locations
-  - Selects a random item
-  - Starts a 5-second countdown
+    - Teleports all players with the "player" role to random locations
+    - Selects a random item
+    - Starts a 5-second countdown
 
 - `/lootrush stop` - stops the current game
 
-  - Clears all game data
-  - Returns players to spawn
-  - Clears inventories
+    - Clears all game data
+    - Returns players to spawn
+    - Clears inventories
 
 - `/lootrush cancel` - cancels countdown or loading
 
-  - Used to interrupt the game start process
-  - Cancels all teleportation operations and chunk loading
+    - Used to interrupt the game start process
+    - Cancels all teleportation operations and chunk loading
 
 - `/lootrush status` - shows the current game status
 
-  - Shows current state (IDLE, COUNTDOWN, ACTIVE)
-  - Shows the current target item
+    - Shows current state (IDLE, COUNTDOWN, ACTIVE)
+    - Shows the current target item
 
 - `/lootrush skip` - skips the current item (only during active game)
 
-  - Selects a new random item
-  - Removes the old item from players' inventories
+    - Selects a new random item
+    - Removes the old item from players' inventories
 
 - `/lootrush role <player|spectator> [player|selector]` - changes a player's role
-  - `player` - player participates in the mini-game
-  - `spectator` - player watches the game
-  - If role is not specified, the command applies to the executor (players only)
-  - Supports Minecraft selectors (@a, @p, @r, @s, @e[type=player])
+    - `player` - player participates in the mini-game
+    - `spectator` - player watches the game
+    - If role is not specified, the command applies to the executor (players only)
+    - Supports Minecraft selectors (@a, @p, @r, @s, @e[type=player])
 
 - `/lootrush lang <en|ru|uk>` - changes language
-  - `en` - English
-  - `ru` - Russian
-  - `uk` (or `ua`) - Ukrainian
+    - `en` - English
+    - `ru` - Russian
+    - `ua` (or `uk`) - Ukrainian
 
 ##### Permissions
 
@@ -130,10 +139,10 @@ Main command for managing the mini-game.
 /lootrush role player @a
 ```
 
-**Change language to Ukrainian:**
+**Change language:**
 
 ```
-/lootrush lang uk
+/lootrush lang [en/ru/ua]
 ```
 
 **Stop the game:**
@@ -215,6 +224,15 @@ For questions and suggestions, please create an issue in the project repository.
 # banned-items: Список предметов, которые не должны появляться в игре.
 # Можно использовать точные названия (например, BEDROCK) или регулярні выражения, начинающиеся с "REGEX:"
 
+# swap-interval-seconds: Интервал между сменами мест в секундах (по умолчанию 300 секунд = 5 минут)
+swap-interval-seconds: 300
+
+# scatter-min-coord: Минимальная координата для телепортации (по умолчанию 10000)
+scatter-min-coord: 10000
+
+# scatter-max-coord: Максимальная координата для телепортации (по умолчанию 100000)
+scatter-max-coord: 100000
+
 banned-items:
   - BEDROCK
   - BARRIER
@@ -238,41 +256,41 @@ banned-items:
 
 - `/lootrush start` - запускает новую игру
 
-  - Телепортирует всех игроков с ролью "player" на случайные локации
-  - Выбирает случайный предмет
-  - Начинает отсчёт 5 секунд
+    - Телепортирует всех игроков с ролью "player" на случайные локации
+    - Выбирает случайный предмет
+    - Начинает отсчёт 5 секунд
 
 - `/lootrush stop` - останавливает текущую игру
 
-  - Очищает все данные игры
-  - Возвращает игроков на спавн
-  - Очищает инвентари
+    - Очищает все данные игры
+    - Возвращает игроков на спавн
+    - Очищает инвентари
 
 - `/lootrush cancel` - отменяет отсчёт или загрузку
 
-  - Используется для прерывания процесса начала игры
-  - Отменяет все операции телепортации и загрузки чанков
+    - Используется для прерывания процесса начала игры
+    - Отменяет все операции телепортации и загрузки чанков
 
 - `/lootrush status` - показывает текущий статус игры
 
-  - Показывает текущее состояние (IDLE, COUNTDOWN, ACTIVE)
-  - Показывает текущий целевой предмет
+    - Показывает текущее состояние (IDLE, COUNTDOWN, ACTIVE)
+    - Показывает текущий целевой предмет
 
 - `/lootrush skip` - пропускает текущий предмет (только во время активной игры)
 
-  - Выбирает новый случайный предмет
-  - Удаляет старый предмет из инвентарей игроков
+    - Выбирает новый случайный предмет
+    - Удаляет старый предмет из инвентарей игроков
 
 - `/lootrush role <player|spectator> [игрок|селектор]` - изменяет роль игрока
-  - `player` - игрок участвует в мини-игре
-  - `spectator` - игрок наблюдает за игрой
-  - Если роль не указана, команда применяется к исполнителю (только для игроков)
-  - Поддерживает селекторы Minecraft (@a, @p, @r, @s, @e[type=player])
+    - `player` - игрок участвует в мини-игре
+    - `spectator` - игрок наблюдает за игрой
+    - Если роль не указана, команда применяется к исполнителю (только для игроков)
+    - Поддерживает селекторы Minecraft (@a, @p, @r, @s, @e[type=player])
 
-- `/lootrush lang <ru|en|uk>` - изменяет язык
-  - `ru` - Русский
-  - `en` - Английский
-  - `uk` (или `ua`) - Украинский
+- `/lootrush lang <ru|en|ua>` - изменяет язык
+    - `ru` - Русский
+    - `en` - Английский
+    - `ua` (или `uk`) - Украинский
 
 ##### Разрешения
 
@@ -288,7 +306,7 @@ banned-items:
    /lootrush role player @a
    ```
 
-2. Запустіть игру:
+2. Запустить игру:
 
    ```
    /lootrush start
@@ -312,10 +330,10 @@ banned-items:
 /lootrush role player @a
 ```
 
-**Сменить язык на украинский:**
+**Сменить язык:**
 
 ```
-/lootrush lang ua
+/lootrush lang [en/ru/ua]
 ```
 
 **Остановить игру:**
@@ -329,7 +347,7 @@ banned-items:
 #### Система жизней
 
 - Каждый игрок начинает с 5 жизнями
-- При смерті игрок теряет одну жизнь
+- При смерти игрок теряет одну жизнь
 - Когда жизни заканчиваются, игрок автоматически переводится в наблюдатели
 - Жизни отображаются в scoreboard
 
@@ -365,183 +383,3 @@ banned-items:
 Для вопросов и предложений создайте issue в репозитории проекта.
 
 ---
-
-## Українська
-
-Міні-гра для Minecraft серверів на базі Paper 1.21, в якій гравці змагаються, хто першим здобуде випадковий предмет.
-
-### Основні функції
-
-- **Випадковий предмет** - система автоматично вибирає предмет з пулу доступних предметів
-- **Система ролей** - підтримка ролей гравця та спостерігача
-- **Система життів** - кожен гравець має 5 життів, після смерті втрачає одне життя
-- **Випадкові телепортації** - гравці випадково міняються місцями кожні 5 хвилин (перша телепортація через 4:50)
-- **Безпечна телепортація** - автоматичний пошук безпечних локацій для гравців
-- **Захист від шкоди** - гравці отримують невразливість на 25 секунд після телепортації
-- **Мультимовність** - підтримка російської, англійської та української мов
-
-### Встановлення
-
-1. Завантажте останню версію плагіна з Releases
-2. Помістіть файл `LootRush.jar` в папку `plugins` вашого сервера
-3. Перезапустіть сервер
-4. Плагін готовий до використання!
-
-### Конфігурація
-
-Плагін створює файл `config.yml` у папці `plugins/LootRush`.
-Ви можете налаштувати список заборонених предметів, які не будуть вибиратися як ціль.
-
-```yaml
-# Конфігурація LootRush
-# banned-items: Список предметів, які не повинні з'являтися в грі.
-# Можна використовувати точні назви (наприклад, BEDROCK) або регулярні вирази, що починаються з "REGEX:"
-
-banned-items:
-  - BEDROCK
-  - BARRIER
-  - REGEX:.*_SPAWN_EGG
-  # ... та інші
-```
-
-### Вимоги
-
-- **Minecraft**: 1.21.x
-- **Сервер**: Paper/Bukkit 1.21.8 або вище
-- **Java**: 21 або вище
-
-### Команди
-
-#### `/lootrush` (або `/lr`)
-
-Основна команда для керування міні-грою.
-
-##### Підкоманди:
-
-- `/lootrush start` - запускає нову гру
-
-  - Телепортує всіх гравців з роллю "player" на випадкові локації
-  - Вибирає випадковий предмет
-  - Починає відлік 5 секунд
-
-- `/lootrush stop` - зупиняє поточну гру
-
-  - Очищає всі дані гри
-  - Повертає гравців на спавн
-  - Очищає інвентарі
-
-- `/lootrush cancel` - скасовує відлік або завантаження
-
-  - Використовується для переривання процесу початку гри
-  - Скасовує всі операції телепортації та завантаження чанків
-
-- `/lootrush status` - показує поточний статус гри
-
-  - Показує поточний стан (IDLE, COUNTDOWN, ACTIVE)
-  - Показує поточний цільовий предмет
-
-- `/lootrush skip` - пропускає поточний предмет (тільки під час активної гри)
-
-  - Вибирає новий випадковий предмет
-  - Видаляє старий предмет з інвентарів гравців
-
-- `/lootrush role <player|spectator> [гравець|селектор]` - змінює роль гравця
-  - `player` - гравець бере участь у міні-грі
-  - `spectator` - гравець спостерігає за грою
-  - Якщо роль не вказана, команда застосовується до виконавця (тільки для гравців)
-  - Підтримує селектори Minecraft (@a, @p, @r, @s, @e[type=player])
-
-- `/lootrush lang <ru|en|uk>` - змінює мову
-  - `ru` - Російська
-  - `en` - Англійська
-  - `uk` (або `ua`) - Українська
-
-##### Дозволи
-
-- `lootrush.admin` - дозвіл для всіх команд (за замовчуванням тільки для операторів)
-
-### Використання
-
-#### Швидкий старт
-
-1. Встановіть ролі гравцям:
-
-   ```
-   /lootrush role player @a
-   ```
-
-2. Запустіть гру:
-
-   ```
-   /lootrush start
-   ```
-
-3. Гравці будуть телепортовані на випадкові локації, і почнеться відлік
-
-4. Перший гравець, який здобуде цільовий предмет, перемагає!
-
-#### Приклади використання
-
-**Встановити роль спостерігача для конкретного гравця:**
-
-```
-/lootrush role spectator howegf
-```
-
-**Встановити роль гравця для всіх:**
-
-```
-/lootrush role player @a
-```
-
-**Змінити мову на українську:**
-
-```
-/lootrush lang ua
-```
-
-**Зупинити гру:**
-
-```
-/lootrush stop
-```
-
-### Механіка гри
-
-#### Система життів
-
-- Кожен гравець починає з 5 життями
-- При смерті гравець втрачає одне життя
-- Коли життя закінчуються, гравець автоматично переводиться в спостерігачі
-- Життя відображаються в scoreboard
-
-#### Випадкові телепортації
-
-- Перша телепортація відбувається через 4 хвилини 50 секунд після початку гри
-- Наступні телепортації відбуваються кожні 5 хвилин
-- Гравці отримують попередження за 1 хвилину, 30 секунд і 10 секунд до телепортації
-- Після телепортації гравці отримують невразливість на 25 секунд
-- Інвентар гравців очищається після кожної телепортації
-
-#### Вибір предметів
-
-Плагін автоматично фільтрує предмети, виключаючи:
-
-- Предметы, які неможливо отримати в виживанні
-- Технічні блоки (командні блоки, бар'єри тощо)
-- Предметы, налаштовані в `config.yml`
-
-### Відомі обмеження
-
-- Телепортація може зайняти деякий час при великій кількості гравців через завантаження чанків
-- Гра працює тільки в звичайному світі (не в Nether/End)
-
-### Ліцензія
-
-Цей проект створений для особистого використання. Всі права захищені.
-
-### Автор
-
-## **Nasarwo (DaGGeR)**
-
-Для питань та пропозицій створіть issue в репозиторії проекту.

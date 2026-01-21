@@ -51,7 +51,7 @@ public class SwapService {
 		stop();
 		task = new BukkitRunnable() {
 			private int countdown = -1;
-			private long nextSwapTime = gameStartTime + (swapIntervalTicks * 50); // Convert ticks to ms (1 tick = 50ms)
+			private long nextSwapTime = gameStartTime + (swapIntervalTicks * 50);
 
 			@Override
 			public void run() {
@@ -61,7 +61,6 @@ public class SwapService {
 
 				List<Player> participants = participantsSupplier.get();
 				if (participants.size() < 2) {
-					// Recalculate next swap time to keep it aligned if player count drops
 					long currentTime = System.currentTimeMillis();
 					long elapsed = currentTime - gameStartTime;
 					long intervalMs = swapIntervalTicks * 50L;
@@ -82,7 +81,6 @@ public class SwapService {
 				}
 
 				if (secondsUntilSwap <= SWAP_COUNTDOWN_SECONDS && secondsUntilSwap > 0) {
-					// Avoid spamming if secondsUntilSwap stays the same for multiple ticks
 					if (countdown != secondsUntilSwap) {
 						countdown = secondsUntilSwap;
 						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
@@ -94,15 +92,13 @@ public class SwapService {
 					}
 				}
 
-				// +1 to align with user expectation (e.g. at 60.9s show 60s message)
 				int displaySeconds = secondsUntilSwap + 1;
 
 				if (displaySeconds == 60) {
-					// Ensure we only broadcast once per second
 					if (countdown != 60) {
 						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
 						participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_MINUTE));
-						countdown = 60; // Use countdown var to track we showed this
+						countdown = 60;
 					}
 				} else if (displaySeconds == 30) {
 					if (countdown != 30) {
@@ -113,7 +109,7 @@ public class SwapService {
 				}
 			}
 		};
-		task.runTaskTimer(plugin, 0L, 5L); // Check more frequently (every 5 ticks / 0.25s) for precision
+		task.runTaskTimer(plugin, 0L, 5L);
 	}
 
 	public void stop() {

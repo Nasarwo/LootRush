@@ -28,7 +28,6 @@ public class ScoreboardService {
 	public void createScoreboard(Map<UUID, Integer> playerLives) {
 		clear();
 
-		// Create scoreboard for every online player (participants and spectators)
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			createPlayerScoreboard(player, playerLives);
 		}
@@ -44,7 +43,6 @@ public class ScoreboardService {
 		playerScoreboards.put(viewer.getUniqueId(), scoreboard);
 		playerObjectives.put(viewer.getUniqueId(), objective);
 
-		// Populate with all players' lives
 		for (Map.Entry<UUID, Integer> entry : allLives.entrySet()) {
 			Player target = Bukkit.getPlayer(entry.getKey());
 			if (target != null) {
@@ -56,7 +54,6 @@ public class ScoreboardService {
 	}
 
 	public void updatePlayerLives(Player targetPlayer, int lives) {
-		// Update this player's score on ALL active scoreboards
 		String targetName = targetPlayer.getName();
 
 		for (Objective objective : playerObjectives.values()) {
@@ -98,14 +95,13 @@ public class ScoreboardService {
 					.build();
 			String timerKey = LegacyComponentSerializer.legacySection().serialize(timerComponent);
 			lastTimerKeys.put(playerId, timerKey);
-			objective.getScore(timerKey).setScore(999); // Show timer at the top
+			objective.getScore(timerKey).setScore(999);
 		}
 	}
 
 	public void removePlayer(Player player) {
 		UUID playerId = player.getUniqueId();
 
-		// Remove their personal scoreboard data
 		Scoreboard scoreboard = playerScoreboards.remove(playerId);
 		Objective objective = playerObjectives.remove(playerId);
 		lastTimerKeys.remove(playerId);
@@ -114,10 +110,8 @@ public class ScoreboardService {
 			objective.unregister();
 		}
 
-		// Reset their scoreboard to main
 		player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
 
-		// Also remove this player from OTHER players' scoreboards
 		for (Objective obj : playerObjectives.values()) {
 			obj.getScoreboard().resetScores(player.getName());
 		}
@@ -131,7 +125,6 @@ public class ScoreboardService {
 			}
 		}
 
-		// Unregister all objectives
 		for (Objective objective : playerObjectives.values()) {
 			if (objective != null) {
 				objective.unregister();
@@ -150,7 +143,6 @@ public class ScoreboardService {
 		return null;
 	}
 
-	// Called when a new player joins (e.g. spectator) to give them the current board
 	public void addViewer(Player viewer, Map<UUID, Integer> currentLives) {
 		if (playerScoreboards.containsKey(viewer.getUniqueId())) {
 			return;

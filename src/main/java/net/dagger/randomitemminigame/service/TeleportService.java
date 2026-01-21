@@ -680,7 +680,6 @@ public class TeleportService {
 			return;
 		}
 
-		// Remove boss bar immediately if successful to avoid conflict with GameInfoService
 		if (success) {
 			for (BossBar bossBar : bossBars.values()) {
 				bossBar.removeAll();
