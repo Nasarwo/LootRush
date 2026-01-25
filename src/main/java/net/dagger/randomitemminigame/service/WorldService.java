@@ -18,7 +18,7 @@ public class WorldService {
 		for (World world : Bukkit.getWorlds()) {
 			world.setDifficulty(Difficulty.PEACEFUL);
 			world.setTime(0);
-			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
+			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 			world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
 		}
 	}
@@ -39,14 +39,14 @@ public class WorldService {
 	public void setWorldStateActive() {
 		for (World world : Bukkit.getWorlds()) {
 			world.setDifficulty(Difficulty.NORMAL);
+			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
 		}
 	}
 
 	public void setWorldStateAfterGame() {
 		for (World world : Bukkit.getWorlds()) {
 			world.setDifficulty(Difficulty.PEACEFUL);
-			world.setTime(0);
-			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
 			world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
 		}
 		resetAdvancements();

@@ -1,0 +1,3 @@
+- установка роли подсказки и текстовые ошибки
+- подсказок для команд нигде нет
+- при остановке игры через /lr stop - Caused by: java.util.concurrent.CancellationException

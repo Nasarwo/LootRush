@@ -89,10 +89,20 @@ public class GameInfoService {
         for (Map.Entry<LanguageService.Language, ServerBossEvent> entry : bossBars.entrySet()) {
             ServerBossEvent bar = entry.getValue();
 
-            Component title = Component.translatable(newItem.getDescriptionId()).withStyle(ChatFormatting.WHITE);
+            Component title = Component.translatable(newItem.getDescriptionId()).withStyle(ChatFormatting.GREEN);
 
             bar.setName(title);
             bar.setProgress(0.0f);
+        }
+    }
+
+    public void setProgress(double progress) {
+        if (bossBars.isEmpty()) {
+            return;
+        }
+        float clamped = (float) Math.max(0.0, Math.min(1.0, progress));
+        for (ServerBossEvent bar : bossBars.values()) {
+            bar.setProgress(clamped);
         }
     }
 }

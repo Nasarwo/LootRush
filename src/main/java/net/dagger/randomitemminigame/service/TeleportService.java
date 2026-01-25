@@ -40,6 +40,7 @@ public class TeleportService {
 	private final Random random = new Random();
 	private final Map<LanguageService.Language, BossBar> currentBossBars = new HashMap<>();
 	private volatile boolean cancelled = false;
+	private volatile boolean debugEnabled = false;
 	private final List<CompletableFuture<?>> activeOperations = new CopyOnWriteArrayList<>();
 
 	private static final Set<Material> UNSAFE_FLOOR_BLOCKS = EnumSet.of(
@@ -121,7 +122,9 @@ public class TeleportService {
 					Player player = Bukkit.getPlayer(target.playerId());
 					if (player != null && player.isOnline()) {
 						LanguageService.Language lang = languageService.getLanguage(player);
-						player.sendMessage(Messages.get(lang, Messages.MessageKey.LOADING_CHUNKS));
+						if (debugEnabled) {
+							player.sendMessage(Messages.get(lang, Messages.MessageKey.LOADING_CHUNKS));
+						}
 					}
 				}
 			});
@@ -199,7 +202,11 @@ public class TeleportService {
 
 			for (Player participant : players) {
 				LanguageService.Language participantLang = languageService.getLanguage(participant);
-				participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND, player.getName(), formatLocation(location)));
+				if (debugEnabled) {
+					participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND, player.getName(), formatLocation(location)));
+				} else {
+					participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND_BRIEF, player.getName()));
+				}
 			}
 			accumulator.add(new PlayerScatterTarget(player.getUniqueId(), location));
 			updateScatterBossBar(scatterBars, accumulator.size(), players.size(), player.getName(), false);
@@ -292,14 +299,16 @@ public class TeleportService {
 				Block head = world.getBlockAt(x, feetY + 1, z);
 
 				if (isSafeFloor(floor) && isPassable(feet) && isPassable(head)) {
-					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z);
-					plugin.getLogger().info("[LootRush] " + message + " on block " + floor.getType());
-					if (!cancelled && participants != null) {
-						for (Player participant : participants) {
-							if (participant != null && participant.isOnline()) {
-								LanguageService.Language participantLang = languageService.getLanguage(participant);
-								participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z));
+					if (debugEnabled) {
+						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
+						String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z);
+						plugin.getLogger().info("[LootRush] " + message + " on block " + floor.getType());
+						if (!cancelled && participants != null) {
+							for (Player participant : participants) {
+								if (participant != null && participant.isOnline()) {
+									LanguageService.Language participantLang = languageService.getLanguage(participant);
+									participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetY, z));
+								}
 							}
 						}
 					}
@@ -321,13 +330,15 @@ public class TeleportService {
 					});
 				} else {
 					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType());
-					plugin.getLogger().info("[LootRush] " + message);
-					if (!cancelled && participants != null) {
-						for (Player participant : participants) {
-							if (participant != null && participant.isOnline()) {
-								LanguageService.Language participantLang = languageService.getLanguage(participant);
-								participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType()));
+					if (debugEnabled) {
+						String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType());
+						plugin.getLogger().info("[LootRush] " + message);
+						if (!cancelled && participants != null) {
+							for (Player participant : participants) {
+								if (participant != null && participant.isOnline()) {
+									LanguageService.Language participantLang = languageService.getLanguage(participant);
+									participant.sendMessage(Messages.get(participantLang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetY, z, floor.getType(), feet.getType(), head.getType()));
+								}
 							}
 						}
 					}
@@ -401,15 +412,17 @@ public class TeleportService {
 				return;
 			}
 			updateLoadingBossBar(0, totalChunks);
-			for (PlayerScatterTarget target : allTargets) {
-				Player player = Bukkit.getPlayer(target.playerId());
-				if (player != null && player.isOnline()) {
-					LanguageService.Language playerLang = languageService.getLanguage(player);
-					player.sendMessage(Component.text()
-							.append(Messages.get(playerLang, Messages.MessageKey.LOADING_NEAR_CHUNKS))
-							.append(Component.text(totalNearChunks, NamedTextColor.AQUA))
-							.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
-							.build());
+			if (debugEnabled) {
+				for (PlayerScatterTarget target : allTargets) {
+					Player player = Bukkit.getPlayer(target.playerId());
+					if (player != null && player.isOnline()) {
+						LanguageService.Language playerLang = languageService.getLanguage(player);
+						player.sendMessage(Component.text()
+								.append(Messages.get(playerLang, Messages.MessageKey.LOADING_NEAR_CHUNKS))
+								.append(Component.text(totalNearChunks, NamedTextColor.AQUA))
+								.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
+								.build());
+					}
 				}
 			}
 		});
@@ -430,11 +443,13 @@ public class TeleportService {
 							if (!cancelled) {
 								nearChunkCounter[0]++;
 								updateLoadingBossBar(nearChunkCounter[0] + farChunkCounter[0], totalChunks);
-								for (PlayerScatterTarget target : allTargets) {
-									Player player = Bukkit.getPlayer(target.playerId());
-									if (player != null && player.isOnline()) {
-										LanguageService.Language playerLang = languageService.getLanguage(player);
-										player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, nearChunkCounter[0], totalNearChunks));
+								if (debugEnabled) {
+									for (PlayerScatterTarget target : allTargets) {
+										Player player = Bukkit.getPlayer(target.playerId());
+										if (player != null && player.isOnline()) {
+											LanguageService.Language playerLang = languageService.getLanguage(player);
+											player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, nearChunkCounter[0], totalNearChunks));
+										}
 									}
 								}
 							}
@@ -465,12 +480,14 @@ public class TeleportService {
 						Player player = Bukkit.getPlayer(target.playerId());
 						if (player != null && player.isOnline()) {
 							LanguageService.Language playerLang = languageService.getLanguage(player);
-							player.sendMessage(Component.text()
-									.append(Messages.get(playerLang, Messages.MessageKey.NEAR_CHUNKS_LOADED))
-									.append(Messages.get(playerLang, Messages.MessageKey.LOADING_FAR_CHUNKS))
-									.append(Component.text(totalFarChunks, NamedTextColor.AQUA))
-									.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
-									.build());
+							if (debugEnabled) {
+								player.sendMessage(Component.text()
+										.append(Messages.get(playerLang, Messages.MessageKey.NEAR_CHUNKS_LOADED))
+										.append(Messages.get(playerLang, Messages.MessageKey.LOADING_FAR_CHUNKS))
+										.append(Component.text(totalFarChunks, NamedTextColor.AQUA))
+										.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_TEXT))
+										.build());
+							}
 						}
 					}
 				});
@@ -494,11 +511,13 @@ public class TeleportService {
 									if (!cancelled) {
 										farChunkCounter[0]++;
 										updateLoadingBossBar(nearChunkCounter[0] + farChunkCounter[0], totalChunks);
-										for (PlayerScatterTarget target : allTargets) {
-											Player player = Bukkit.getPlayer(target.playerId());
-											if (player != null && player.isOnline()) {
-												LanguageService.Language playerLang = languageService.getLanguage(player);
-												player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, farChunkCounter[0], totalFarChunks));
+										if (debugEnabled) {
+											for (PlayerScatterTarget target : allTargets) {
+												Player player = Bukkit.getPlayer(target.playerId());
+												if (player != null && player.isOnline()) {
+													LanguageService.Language playerLang = languageService.getLanguage(player);
+													player.sendMessage(Messages.get(playerLang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS, chunkX, chunkZ, farChunkCounter[0], totalFarChunks));
+												}
 											}
 										}
 									}
@@ -530,10 +549,12 @@ public class TeleportService {
 								Player player = Bukkit.getPlayer(target.playerId());
 								if (player != null && player.isOnline()) {
 									LanguageService.Language playerLang = languageService.getLanguage(player);
-									player.sendMessage(Component.text()
-											.append(Messages.get(playerLang, Messages.MessageKey.ALL_CHUNKS_LOADED))
-											.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_COUNT, totalChunks))
-											.build());
+									if (debugEnabled) {
+										player.sendMessage(Component.text()
+												.append(Messages.get(playerLang, Messages.MessageKey.ALL_CHUNKS_LOADED))
+												.append(Messages.get(playerLang, Messages.MessageKey.CHUNKS_COUNT, totalChunks))
+												.build());
+									}
 								}
 							}
 						});
@@ -684,9 +705,10 @@ public class TeleportService {
 			return;
 		}
 		double progress = Math.min(1.0, Math.max(0.0, (double) loadedChunks / totalChunks));
+		int percent = Math.min(100, Math.max(0, (int) Math.round(progress * 100)));
 		for (Map.Entry<LanguageService.Language, BossBar> entry : currentBossBars.entrySet()) {
 			BossBar bossBar = entry.getValue();
-			bossBar.setTitle(Messages.getString(entry.getKey(), Messages.MessageKey.LOADING_CHUNKS));
+			bossBar.setTitle(Messages.getString(entry.getKey(), Messages.MessageKey.LOADING_CHUNKS_PERCENT, percent));
 			bossBar.setProgress(progress);
 		}
 	}
@@ -746,6 +768,10 @@ public class TeleportService {
 				newBar.addPlayer(player);
 			}
 		});
+	}
+
+	public void setDebugEnabled(boolean debugEnabled) {
+		this.debugEnabled = debugEnabled;
 	}
 
 	private void trackOperation(CompletableFuture<?> future) {

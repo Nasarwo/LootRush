@@ -60,6 +60,7 @@ public class LootRushGameManager {
     private MinecraftServer server;
     private GameState state = GameState.IDLE;
     private Item targetItem;
+    private boolean debugEnabled = false;
 
     private boolean isCountingDown = false;
     private int countdownSecondsLeft = 0;
@@ -83,6 +84,7 @@ public class LootRushGameManager {
                 () -> state == GameState.ACTIVE && targetItem != null,
                 this::getActiveParticipants,
                 this::broadcastToParticipants,
+                gameInfoService::setProgress,
                 swapIntervalSeconds);
     }
 
@@ -107,14 +109,31 @@ public class LootRushGameManager {
                 .then(Commands.literal("start").executes(this::handleStart))
                 .then(Commands.literal("stop").executes(this::handleStop))
                 .then(Commands.literal("status").executes(this::handleStatus))
-                .then(Commands.literal("cancel").executes(this::handleCancel))
                 .then(Commands.literal("skip").executes(this::handleSkip))
+                .then(Commands.literal("debug").executes(this::handleDebug))
                 .then(Commands.literal("lang")
                         .executes(this::handleLangUsage)
                         .then(Commands.argument("language", StringArgumentType.word())
+                                .suggests((context, builder) -> {
+                                    for (String lang : List.of("ru", "en", "ua")) {
+                                        if (lang.startsWith(builder.getRemaining().toLowerCase())) {
+                                            builder.suggest(lang);
+                                        }
+                                    }
+                                    return builder.buildFuture();
+                                })
                                 .executes(this::handleLang)))
                 .then(Commands.literal("role")
+                        .executes(this::handleRoleUsage)
                         .then(Commands.argument("role", StringArgumentType.word())
+                                .suggests((context, builder) -> {
+                                    for (String role : List.of("player", "spectator")) {
+                                        if (role.startsWith(builder.getRemaining().toLowerCase())) {
+                                            builder.suggest(role);
+                                        }
+                                    }
+                                    return builder.buildFuture();
+                                })
                                 .executes(this::handleRoleSelf)
                                 .then(Commands.argument("targets", EntityArgument.players())
                                         .executes(this::handleRole))))
@@ -185,6 +204,9 @@ public class LootRushGameManager {
         teleportService.scatterPlayers(participantsSnapshot).whenComplete((ignored, throwable) -> {
              source.getServer().execute(() -> {
                  if (throwable != null) {
+                     if (isCancellation(throwable)) {
+                         return;
+                     }
                      LootRush.LOGGER.error("Не удалось телепортировать игроков", throwable);
                      stopGame(false);
                      source.sendFailure(Component.literal("Не удалось телепортировать игроков: " + throwable.getMessage()));
@@ -192,7 +214,6 @@ public class LootRushGameManager {
                  }
                  if (state != GameState.COUNTDOWN) return;
 
-                 broadcast(Messages.MessageKey.PLAYERS_TELEPORTED, COUNTDOWN_SECONDS);
                  winService.removeTargetItemFromPlayers(participantsSnapshot, targetItem);
                  getWorldService().setWorldStateActive();
                  getWorldService().resetBorder();
@@ -202,6 +223,17 @@ public class LootRushGameManager {
         });
 
         return 1;
+    }
+
+    private boolean isCancellation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof java.util.concurrent.CancellationException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private int handleStop(CommandContext<CommandSourceStack> context) {
@@ -215,20 +247,6 @@ public class LootRushGameManager {
 
         stopGame(true);
         broadcast(Messages.MessageKey.GAME_STOPPED);
-        return 1;
-    }
-
-    private int handleCancel(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
-        LanguageService.Language lang = getLanguage(source);
-
-        if (state != GameState.COUNTDOWN) {
-            source.sendFailure(Messages.get(lang, Messages.MessageKey.NO_COUNTDOWN));
-            return 0;
-        }
-
-        stopGame(false);
-        broadcast(Messages.MessageKey.GAME_CANCELLED);
         return 1;
     }
 
@@ -282,11 +300,23 @@ public class LootRushGameManager {
         return 1;
     }
 
+    private int handleDebug(CommandContext<CommandSourceStack> context) {
+        debugEnabled = !debugEnabled;
+        teleportService.setDebugEnabled(debugEnabled);
+        LanguageService.Language lang = getLanguage(context.getSource());
+        if (debugEnabled) {
+            context.getSource().sendSuccess(() -> Messages.get(lang, Messages.MessageKey.DEBUG_ENABLED), false);
+        } else {
+            context.getSource().sendSuccess(() -> Messages.get(lang, Messages.MessageKey.DEBUG_DISABLED), false);
+        }
+        return 1;
+    }
+
     private int handleLang(CommandContext<CommandSourceStack> context) {
         String langCode = StringArgumentType.getString(context, "language");
         LanguageService.Language newLang = LanguageService.Language.fromCode(langCode);
 
-        if (!Objects.equals(langCode, "ru") && !Objects.equals(langCode, "en") && !Objects.equals(langCode, "uk") && !Objects.equals(langCode, "ua")) {
+        if (!Objects.equals(langCode, "ru") && !Objects.equals(langCode, "en") && !Objects.equals(langCode, "ua")) {
             LanguageService.Language lang = getLanguage(context.getSource());
             context.getSource().sendFailure(Messages.get(lang, Messages.MessageKey.UNKNOWN_LANGUAGE));
             return 0;
@@ -317,6 +347,12 @@ public class LootRushGameManager {
     private int handleLangUsage(CommandContext<CommandSourceStack> context) {
         LanguageService.Language lang = getLanguage(context.getSource());
         context.getSource().sendFailure(Messages.get(lang, Messages.MessageKey.LANG_USAGE));
+        return 0;
+    }
+
+    private int handleRoleUsage(CommandContext<CommandSourceStack> context) {
+        LanguageService.Language lang = getLanguage(context.getSource());
+        context.getSource().sendFailure(Messages.get(lang, Messages.MessageKey.ROLE_USAGE));
         return 0;
     }
 
@@ -366,7 +402,7 @@ public class LootRushGameManager {
         }
 
         if (targets.size() == 1) {
-            context.getSource().sendSuccess(() -> Messages.get(lang, Messages.MessageKey.ROLE_SET_SINGLE, roleName, targets.get(0).getName()), false);
+            context.getSource().sendSuccess(() -> Messages.get(lang, Messages.MessageKey.ROLE_SET_SINGLE, roleName, targets.get(0).getName().getString()), false);
         } else {
             context.getSource().sendSuccess(() -> Messages.get(lang, Messages.MessageKey.ROLE_SET_MULTIPLE, roleName, targets.size()), false);
         }
@@ -422,12 +458,12 @@ public class LootRushGameManager {
         if (isCountingDown) {
             if (now - lastCountdownTick >= 1000) {
                 lastCountdownTick = now;
-                countdownSecondsLeft--;
                 if (countdownSecondsLeft <= 0) {
                     isCountingDown = false;
                     startGame();
                 } else {
                     broadcast(Messages.MessageKey.START_IN_SECONDS, countdownSecondsLeft);
+                    countdownSecondsLeft--;
                 }
             }
         }
@@ -547,7 +583,7 @@ public class LootRushGameManager {
                 roleService.setRole(player, Role.SPECTATOR);
                 LanguageService.Language lang = languageService.getLanguage(player);
                 player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.NO_LIVES_LEFT));
-                broadcastToParticipants(Messages.get(lang, Messages.MessageKey.PLAYER_OUT, player.getName()));
+                broadcastToParticipants(Messages.get(lang, Messages.MessageKey.PLAYER_OUT, player.getName().getString()));
             } else {
                 LanguageService.Language lang = languageService.getLanguage(player);
                 player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.LIVES_REMAINING, lives, LivesService.getMaxLives()));

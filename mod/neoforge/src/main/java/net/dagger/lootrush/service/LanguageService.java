@@ -11,7 +11,7 @@ public class LanguageService {
     public enum Language {
         RU("ru"),
         EN("en"),
-        UK("uk");
+        UK("ua");
 
         private final String code;
 
@@ -31,7 +31,7 @@ public class LanguageService {
             if ("en".equals(lowerCode) || "english".equals(lowerCode)) {
                 return EN;
             }
-            if ("uk".equals(lowerCode) || "ukrainian".equals(lowerCode) || "ua".equals(lowerCode)) {
+            if ("ua".equals(lowerCode) || "ukrainian".equals(lowerCode)) {
                 return UK;
             }
             return RU;

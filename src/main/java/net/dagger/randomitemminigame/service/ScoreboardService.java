@@ -4,10 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Criteria;
@@ -87,15 +83,7 @@ public class ScoreboardService {
 			if (lastTimerKey != null) {
 				scoreboard.resetScores(lastTimerKey);
 			}
-
-			LanguageService.Language playerLang = languageService.getLanguage(player);
-			Component timerComponent = Component.text()
-					.append(Messages.get(playerLang, Messages.MessageKey.TIME))
-					.append(Component.text(timeString, NamedTextColor.YELLOW))
-					.build();
-			String timerKey = LegacyComponentSerializer.legacySection().serialize(timerComponent);
-			lastTimerKeys.put(playerId, timerKey);
-			objective.getScore(timerKey).setScore(999);
+			lastTimerKeys.remove(playerId);
 		}
 	}
 

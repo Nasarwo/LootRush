@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 import java.util.function.Supplier;
 
 import net.kyori.adventure.text.Component;
@@ -20,14 +21,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public class SwapService {
 	private final int swapIntervalTicks;
-	private final int firstSwapDelayTicks;
-	private static final int SWAP_COUNTDOWN_SECONDS = 10;
 
 	private final JavaPlugin plugin;
 	private final LanguageService languageService;
 	private final Supplier<Boolean> canSwapSupplier;
 	private final Supplier<List<Player>> participantsSupplier;
 	private final Consumer<Component> participantBroadcast;
+	private final DoubleConsumer progressUpdater;
 	private final Random random = new Random();
 	private BukkitRunnable task;
 
@@ -36,21 +36,22 @@ public class SwapService {
 			Supplier<Boolean> canSwapSupplier,
 			Supplier<List<Player>> participantsSupplier,
 			Consumer<Component> participantBroadcast,
+			DoubleConsumer progressUpdater,
 			int swapIntervalSeconds) {
 		this.plugin = plugin;
 		this.languageService = languageService;
 		this.canSwapSupplier = canSwapSupplier;
 		this.participantsSupplier = participantsSupplier;
 		this.participantBroadcast = participantBroadcast;
+		this.progressUpdater = progressUpdater;
 
 		this.swapIntervalTicks = swapIntervalSeconds * 20;
-		this.firstSwapDelayTicks = (swapIntervalSeconds - SWAP_COUNTDOWN_SECONDS) * 20;
 	}
 
 	public void start(long gameStartTime) {
 		stop();
+		progressUpdater.accept(1.0);
 		task = new BukkitRunnable() {
-			private int countdown = -1;
 			private long nextSwapTime = gameStartTime + (swapIntervalTicks * 50);
 
 			@Override
@@ -65,51 +66,23 @@ public class SwapService {
 					long elapsed = currentTime - gameStartTime;
 					long intervalMs = swapIntervalTicks * 50L;
 					nextSwapTime = gameStartTime + ((elapsed / intervalMs) + 1) * intervalMs;
-					countdown = -1;
+					progressUpdater.accept(1.0);
 					return;
 				}
 
 				long currentTime = System.currentTimeMillis();
 				long msUntilSwap = nextSwapTime - currentTime;
-				int secondsUntilSwap = (int) (msUntilSwap / 1000);
 
 				if (msUntilSwap <= 0) {
 					performSwap(participants);
-					countdown = -1;
 					nextSwapTime += swapIntervalTicks * 50L;
-					return;
+					msUntilSwap = nextSwapTime - currentTime;
 				}
-
-				if (secondsUntilSwap <= SWAP_COUNTDOWN_SECONDS && secondsUntilSwap > 0) {
-					if (countdown != secondsUntilSwap) {
-						countdown = secondsUntilSwap;
-						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-						if (countdown == SWAP_COUNTDOWN_SECONDS) {
-							participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_SECONDS, countdown));
-						} else {
-							participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_SECONDS_SHORT, countdown));
-						}
-					}
-				}
-
-				int displaySeconds = secondsUntilSwap + 1;
-
-				if (displaySeconds == 60) {
-					if (countdown != 60) {
-						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-						participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_MINUTE));
-						countdown = 60;
-					}
-				} else if (displaySeconds == 30) {
-					if (countdown != 30) {
-						LanguageService.Language defaultLang = languageService.getDefaultLanguage();
-						participantBroadcast.accept(Messages.get(defaultLang, Messages.MessageKey.SWAP_IN_30_SECONDS));
-						countdown = 30;
-					}
-				}
+				double progress = Math.max(0.0, Math.min(1.0, msUntilSwap / (swapIntervalTicks * 50.0)));
+				progressUpdater.accept(progress);
 			}
 		};
-		task.runTaskTimer(plugin, 0L, 5L);
+		task.runTaskTimer(plugin, 0L, 20L);
 	}
 
 	public void stop() {

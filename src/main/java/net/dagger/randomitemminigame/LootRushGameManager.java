@@ -62,6 +62,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	private final WorldService worldService;
 	private final CommandService commandService;
 	private final GameInfoService gameInfoService;
+	private boolean debugEnabled = false;
 
 	private GameState state = GameState.IDLE;
 	private Material targetItem;
@@ -86,14 +87,15 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 				() -> state == GameState.ACTIVE && targetItem != null,
 				this::getActiveParticipants,
 				this::broadcastToParticipants,
+				gameInfoService::setProgress,
 				swapIntervalSeconds);
 		this.commandService = new CommandService(
 				languageService,
 				this::handleStart,
 				this::handleStop,
 				this::handleStatus,
-				this::handleCancel,
 				this::handleSkip,
+				this::handleDebug,
 				args -> handleRole(args.sender, args.args),
 				args -> handleLang(args.sender, args.args));
 	}
@@ -171,7 +173,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 				return;
 			}
 
-			broadcast(Messages.MessageKey.PLAYERS_TELEPORTED, COUNTDOWN_SECONDS);
 			winService.removeTargetItemFromPlayers(participantsSnapshot, targetItem);
 			worldService.setWorldStateActive();
 			worldService.resetBorder();
@@ -205,29 +206,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		broadcast(Messages.MessageKey.GAME_STOPPED);
 	}
 
-	private void handleCancel(CommandSender sender) {
-		LanguageService.Language lang = getLanguage(sender);
-		if (state != GameState.COUNTDOWN) {
-			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_COUNTDOWN));
-			return;
-		}
-
-		cancelCountdown();
-		timerService.cancel();
-		timerService.updateState(GameState.IDLE);
-		swapService.stop();
-		teleportService.cancel();
-		livesService.clear();
-		scoreboardService.clear();
-		clearAllPlayerRespawns();
-		state = GameState.IDLE;
-		targetItem = null;
-		gameInfoService.hide();
-		worldService.setWorldStateAfterGame();
-		worldService.resetBorder();
-		broadcast(Messages.MessageKey.GAME_CANCELLED);
-	}
-
 	private void handleSkip(CommandSender sender) {
 		LanguageService.Language lang = getLanguage(sender);
 		if (state != GameState.ACTIVE && state != GameState.COUNTDOWN) {
@@ -240,7 +218,6 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			return;
 		}
 
-		Material oldItem = targetItem;
 		targetItem = itemService.pickRandomItem();
 		gameInfoService.updateTargetItem(targetItem);
 
@@ -280,6 +257,17 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 					.append(Messages.get(lang, Messages.MessageKey.GAME_ACTIVE))
 					.append(formatMaterial(targetItem).color(NamedTextColor.AQUA))
 					.build());
+		}
+	}
+
+	private void handleDebug(CommandSender sender) {
+		debugEnabled = !debugEnabled;
+		teleportService.setDebugEnabled(debugEnabled);
+		LanguageService.Language lang = getLanguage(sender);
+		if (debugEnabled) {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.DEBUG_ENABLED));
+		} else {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.DEBUG_DISABLED));
 		}
 	}
 
@@ -370,7 +358,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		String langCode = args[1].toLowerCase(Locale.ROOT);
 		LanguageService.Language newLang = LanguageService.Language.fromCode(langCode);
 
-		if (!langCode.equals("ru") && !langCode.equals("en") && !langCode.equals("uk") && !langCode.equals("ua")) {
+		if (!langCode.equals("ru") && !langCode.equals("en") && !langCode.equals("ua")) {
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_LANGUAGE));
 			return;
 		}

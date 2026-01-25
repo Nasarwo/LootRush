@@ -18,7 +18,7 @@ public class WorldService {
         server.setDifficulty(Difficulty.PEACEFUL, true);
         for (ServerLevel level : server.getAllLevels()) {
             level.setDayTime(0);
-            level.getGameRules().set(GameRules.ADVANCE_TIME, true, server);
+            level.getGameRules().set(GameRules.ADVANCE_TIME, false, server);
             level.getGameRules().set(GameRules.ADVANCE_WEATHER, false, server);
         }
     }
@@ -44,14 +44,16 @@ public class WorldService {
     public void setWorldStateActive() {
         if (server == null) return;
         server.setDifficulty(Difficulty.NORMAL, true);
+        for (ServerLevel level : server.getAllLevels()) {
+            level.getGameRules().set(GameRules.ADVANCE_TIME, true, server);
+        }
     }
 
     public void setWorldStateAfterGame() {
         if (server == null) return;
         server.setDifficulty(Difficulty.PEACEFUL, true);
         for (ServerLevel level : server.getAllLevels()) {
-            level.setDayTime(0);
-            level.getGameRules().set(GameRules.ADVANCE_TIME, false, server);
+            level.getGameRules().set(GameRules.ADVANCE_TIME, true, server);
             level.getGameRules().set(GameRules.ADVANCE_WEATHER, false, server);
         }
         resetAdvancements();

@@ -41,8 +41,8 @@ public class Messages {
 	}
 
 	public enum MessageKey {
-		USAGE("/lootrush <start|stop|status|role|cancel|skip|lang>", "/lootrush <start|stop|status|role|cancel|skip|lang>", "/lootrush <start|stop|status|role|cancel|skip|lang>", NamedTextColor.YELLOW),
-		UNKNOWN_SUBCOMMAND("Неизвестная подкоманда. Используйте: start, stop, status, role, cancel, skip или lang.", "Unknown subcommand. Use: start, stop, status, role, cancel, skip or lang.", "Невідома підкоманда. Використовуйте: start, stop, status, role, cancel, skip або lang.", NamedTextColor.RED),
+		USAGE("/lootrush <start|stop|status|role|skip|debug|lang>", "/lootrush <start|stop|status|role|skip|debug|lang>", "/lootrush <start|stop|status|role|skip|debug|lang>", NamedTextColor.YELLOW),
+		UNKNOWN_SUBCOMMAND("Неизвестная подкоманда. Используйте: start, stop, status, role, skip, debug или lang.", "Unknown subcommand. Use: start, stop, status, role, skip, debug or lang.", "Невідома підкоманда. Використовуйте: start, stop, status, role, skip, debug або lang.", NamedTextColor.RED),
 		GAME_ALREADY_RUNNING("Мини-игра уже запущена или идёт отсчёт.", "The minigame is already running or countdown is in progress.", "Міні-гру вже запущено або триває відлік.", NamedTextColor.RED),
 		NO_PLAYERS("Нет игроков, участвующих в мини-игре. Используйте /lootrush role player.", "No players participating in the minigame. Use /lootrush role player.", "Немає гравців, які беруть участь у міні-грі. Використовуйте /lootrush role player.", NamedTextColor.RED),
 		RANDOM_ITEM_HEADER("=== Случайный предмет ===", "=== Random Item ===", "=== Випадковий предмет ===", NamedTextColor.GOLD),
@@ -50,8 +50,6 @@ public class Messages {
 		PLAYERS_TELEPORTED("Игроки телепортированы. Отсчёт %d сек...", "Players teleported. Countdown %d sec...", "Гравців телепортовано. Відлік %d сек...", NamedTextColor.GRAY),
 		GAME_ALREADY_STOPPED("Мини-игра и так остановлена.", "The minigame is already stopped.", "Міні-гру і так зупинено.", NamedTextColor.RED),
 		GAME_STOPPED("Мини-игра остановлена администратором.", "The minigame was stopped by an administrator.", "Міні-гру зупинено адміністратором.", NamedTextColor.RED),
-		NO_COUNTDOWN("Нет активного отсчёта или загрузки для прерывания. Используйте /lootrush stop для остановки игры.", "No active countdown or loading to interrupt. Use /lootrush stop to stop the game.", "Немає активного відліку або завантаження для переривання. Використовуйте /lootrush stop для зупинки гри.", NamedTextColor.RED),
-		GAME_CANCELLED("Начало игры прервано администратором.", "Game start was cancelled by an administrator.", "Початок гри перервано адміністратором.", NamedTextColor.RED),
 		GAME_NOT_ACTIVE("Игра не активна. Пропуск предмета возможен только во время активной игры.", "Game is not active. Skipping item is only possible during an active game.", "Гра не активна. Пропуск предмета можливий тільки під час активної гри.", NamedTextColor.RED),
 		NO_CURRENT_ITEM("Нет текущего предмета для пропуска.", "No current item to skip.", "Немає поточного предмета для пропуску.", NamedTextColor.RED),
 		ITEM_SKIPPED("Предмет пропущен администратором. ", "Item skipped by administrator. ", "Предмет пропущено адміністратором. ", NamedTextColor.YELLOW),
@@ -79,8 +77,10 @@ public class Messages {
 		NOW_SPECTATOR("Вы перешли в режим наблюдателя.", "You switched to spectator mode.", "Ви перейшли в режим спостерігача.", NamedTextColor.AQUA),
 		SPECTATING_ROUND("Вы наблюдаете за раундом как зритель.", "You are spectating the round as a viewer.", "Ви спостерігаєте за раундом як глядач.", NamedTextColor.GRAY),
 		LOADING_CHUNKS("Загружаем чанки для телепортации...", "Loading chunks for teleportation...", "Завантажуємо чанки для телепортації...", NamedTextColor.YELLOW),
+		LOADING_CHUNKS_PERCENT("Загрузка чанков - %d%%", "Loading chunks - %d%%", "Завантаження чанків - %d%%", NamedTextColor.YELLOW),
 		TELEPORTED_TO("Вы телепортированы в %s", "You have been teleported to %s", "Ви телепортовані в %s", NamedTextColor.GRAY),
 		SEARCHING_LOCATION("Ищем место для %s...", "Searching location for %s...", "Шукаємо місце для %s...", NamedTextColor.YELLOW),
+		LOCATION_FOUND_BRIEF("Нашли место для %s.", "Found location for %s.", "Знайшли місце для %s.", NamedTextColor.GREEN),
 		LOCATION_FOUND("Нашли место для %s: %s", "Found location for %s: %s", "Знайшли місце для %s: %s", NamedTextColor.GREEN),
 		ATTEMPT_TOO_CLOSE("Попытка #%d для %s: (%d, ???, %d) слишком близко к другим игрокам", "Attempt #%d for %s: (%d, ???, %d) too close to other players", "Спроба #%d для %s: (%d, ???, %d) занадто близько до інших гравців", NamedTextColor.GRAY),
 		ATTEMPT_Y_TOO_LOW("Попытка #%d для %s: (%d, %d) отклонена — Y ниже минимума", "Attempt #%d for %s: (%d, %d) rejected — Y below minimum", "Спроба #%d для %s: (%d, %d) відхилена — Y нижче мінімуму", NamedTextColor.GRAY),
@@ -117,6 +117,8 @@ public class Messages {
 		LAST_PLAYER_STANDING("Игрок остался один в живых: ", "Last player standing: ", "Гравець залишився один в живих: ", NamedTextColor.GOLD),
 		WINS_ROUND(" и выигрывает раунд!", " wins the round!", " і виграє раунд!", NamedTextColor.GOLD),
 		RETURNING_TO_SPAWN("Возвращаем на спавн и очищаем инвентарь после раунда.", "Returning to spawn and clearing inventory after the round.", "Повертаємо на спавн і очищаємо інвентар після раунду.", NamedTextColor.GRAY),
+		DEBUG_ENABLED("Режим отладки включён.", "Debug mode enabled.", "Режим відладки увімкнено.", NamedTextColor.GREEN),
+		DEBUG_DISABLED("Режим отладки выключен.", "Debug mode disabled.", "Режим відладки вимкнено.", NamedTextColor.YELLOW),
 		BOSS_BAR_TARGET_ITEM("Найти: ", "Find: ", "Знайти: ", NamedTextColor.WHITE);
 
 		private final String russian;

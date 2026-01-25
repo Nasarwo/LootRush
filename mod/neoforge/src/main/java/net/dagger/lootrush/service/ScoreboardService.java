@@ -85,12 +85,7 @@ public class ScoreboardService {
             if (lastKey != null) {
                 scoreboard.resetSinglePlayerScore(ScoreHolder.forNameOnly(lastKey), objective);
             }
-
-            LanguageService.Language lang = languageService.getLanguage(viewer);
-            String timerKey = Messages.getString(lang, Messages.MessageKey.TIME)
-                    + net.minecraft.ChatFormatting.YELLOW + timeString;
-            lastTimerKeys.put(viewer.getUUID(), timerKey);
-            scoreboard.getOrCreatePlayerScore(ScoreHolder.forNameOnly(timerKey), objective).set(999);
+            lastTimerKeys.remove(viewer.getUUID());
         }
     }
 

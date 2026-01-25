@@ -66,6 +66,7 @@ public class TeleportService {
     private final Random random = new Random();
     private final Map<LanguageService.Language, ServerBossEvent> currentBossBars = new HashMap<>();
     private volatile boolean cancelled = false;
+    private volatile boolean debugEnabled = false;
     private final List<CompletableFuture<?>> activeOperations = new CopyOnWriteArrayList<>();
     private final Map<UUID, Integer> invulnerabilityTicks = new HashMap<>();
 
@@ -125,8 +126,10 @@ public class TeleportService {
                     if (player == null || player.isRemoved()) {
                         continue;
                     }
-                    LanguageService.Language lang = languageService.getLanguage(player);
-                    player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.LOADING_CHUNKS));
+                    if (debugEnabled) {
+                        LanguageService.Language lang = languageService.getLanguage(player);
+                        player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.LOADING_CHUNKS));
+                    }
                 }
             });
 
@@ -185,8 +188,13 @@ public class TeleportService {
 
             for (ServerPlayer participant : players) {
                 LanguageService.Language participantLang = languageService.getLanguage(participant);
-                participant.sendSystemMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND,
-                        player.getName().getString(), formatLocation(location)));
+                if (debugEnabled) {
+                    participant.sendSystemMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND,
+                            player.getName().getString(), formatLocation(location)));
+                } else {
+                    participant.sendSystemMessage(Messages.get(participantLang, Messages.MessageKey.LOCATION_FOUND_BRIEF,
+                            player.getName().getString()));
+                }
             }
             accumulator.add(new PlayerScatterTarget(player.getUUID(), (ServerLevel) player.level(), location));
             updateScatterBossBar(scatterBars, accumulator.size(), players.size(), player.getName().getString(), false);
@@ -267,16 +275,20 @@ public class TeleportService {
                 BlockState head = level.getBlockState(headPos);
 
                 if (isSafeFloor(floor) && isPassable(level, feetPos) && isPassable(level, headPos)) {
-                    for (ServerPlayer participant : participants) {
-                        LanguageService.Language lang = languageService.getLanguage(participant);
-                        participant.sendSystemMessage(Messages.get(lang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetPos.getY(), z));
+                    if (debugEnabled) {
+                        for (ServerPlayer participant : participants) {
+                            LanguageService.Language lang = languageService.getLanguage(participant);
+                            participant.sendSystemMessage(Messages.get(lang, Messages.MessageKey.ATTEMPT_LOCATION_FOUND, attempt + 1, playerName, x, feetPos.getY(), z));
+                        }
                     }
                     future.complete(feetPos);
                 } else {
-                    for (ServerPlayer participant : participants) {
-                        LanguageService.Language lang = languageService.getLanguage(participant);
-                        participant.sendSystemMessage(Messages.get(lang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetPos.getY(), z,
-                                floor.getBlock().getName().getString(), feet.getBlock().getName().getString(), head.getBlock().getName().getString()));
+                    if (debugEnabled) {
+                        for (ServerPlayer participant : participants) {
+                            LanguageService.Language lang = languageService.getLanguage(participant);
+                            participant.sendSystemMessage(Messages.get(lang, Messages.MessageKey.ATTEMPT_UNSAFE_BLOCKS, attempt + 1, playerName, x, feetPos.getY(), z,
+                                    floor.getBlock().getName().getString(), feet.getBlock().getName().getString(), head.getBlock().getName().getString()));
+                        }
                     }
                     findRandomLocationAttempt(level, existingLocations, future, attempt + 1, playerName, participants);
                 }
@@ -386,12 +398,14 @@ public class TeleportService {
                 return;
             }
             updateLoadingBossBar(0, totalChunks);
-            for (ServerPlayer player : players) {
-                LanguageService.Language lang = languageService.getLanguage(player);
-                player.sendSystemMessage(Component.empty()
-                        .append(Messages.get(lang, Messages.MessageKey.LOADING_NEAR_CHUNKS))
-                        .append(Component.literal(String.valueOf(totalNearChunks)).withStyle(net.minecraft.ChatFormatting.WHITE))
-                        .append(Messages.get(lang, Messages.MessageKey.CHUNKS_TEXT)));
+            if (debugEnabled) {
+                for (ServerPlayer player : players) {
+                    LanguageService.Language lang = languageService.getLanguage(player);
+                    player.sendSystemMessage(Component.empty()
+                            .append(Messages.get(lang, Messages.MessageKey.LOADING_NEAR_CHUNKS))
+                            .append(Component.literal(String.valueOf(totalNearChunks)).withStyle(net.minecraft.ChatFormatting.WHITE))
+                            .append(Messages.get(lang, Messages.MessageKey.CHUNKS_TEXT)));
+                }
             }
         });
 
@@ -400,13 +414,15 @@ public class TeleportService {
                     if (cancelled) {
                         return;
                     }
-                    for (ServerPlayer player : players) {
-                        LanguageService.Language lang = languageService.getLanguage(player);
-                        player.sendSystemMessage(Component.empty()
-                                .append(Messages.get(lang, Messages.MessageKey.NEAR_CHUNKS_LOADED))
-                                .append(Messages.get(lang, Messages.MessageKey.LOADING_FAR_CHUNKS))
-                                .append(Component.literal(String.valueOf(totalFarChunks)).withStyle(net.minecraft.ChatFormatting.WHITE))
-                                .append(Messages.get(lang, Messages.MessageKey.CHUNKS_TEXT)));
+                    if (debugEnabled) {
+                        for (ServerPlayer player : players) {
+                            LanguageService.Language lang = languageService.getLanguage(player);
+                            player.sendSystemMessage(Component.empty()
+                                    .append(Messages.get(lang, Messages.MessageKey.NEAR_CHUNKS_LOADED))
+                                    .append(Messages.get(lang, Messages.MessageKey.LOADING_FAR_CHUNKS))
+                                    .append(Component.literal(String.valueOf(totalFarChunks)).withStyle(net.minecraft.ChatFormatting.WHITE))
+                                    .append(Messages.get(lang, Messages.MessageKey.CHUNKS_TEXT)));
+                        }
                     }
                 }))
                 .thenCompose(ignored -> {
@@ -420,11 +436,13 @@ public class TeleportService {
                                     return;
                                 }
                                 updateLoadingBossBar(totalChunks, totalChunks);
-                                for (ServerPlayer player : players) {
-                                    LanguageService.Language lang = languageService.getLanguage(player);
-                                    player.sendSystemMessage(Component.empty()
-                                            .append(Messages.get(lang, Messages.MessageKey.ALL_CHUNKS_LOADED))
-                                            .append(Messages.get(lang, Messages.MessageKey.CHUNKS_COUNT, totalChunks)));
+                                if (debugEnabled) {
+                                    for (ServerPlayer player : players) {
+                                        LanguageService.Language lang = languageService.getLanguage(player);
+                                        player.sendSystemMessage(Component.empty()
+                                                .append(Messages.get(lang, Messages.MessageKey.ALL_CHUNKS_LOADED))
+                                                .append(Messages.get(lang, Messages.MessageKey.CHUNKS_COUNT, totalChunks)));
+                                    }
                                 }
                             }));
                 });
@@ -473,10 +491,12 @@ public class TeleportService {
                                         return;
                                     }
                                     updateLoadingBossBar(loaded, totalAllChunks);
-                                    for (ServerPlayer player : players) {
-                                        LanguageService.Language lang = languageService.getLanguage(player);
-                                        player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS,
-                                                key.x(), key.z(), count, totalChunks));
+                                    if (debugEnabled) {
+                                        for (ServerPlayer player : players) {
+                                            LanguageService.Language lang = languageService.getLanguage(player);
+                                            player.sendSystemMessage(Messages.get(lang, Messages.MessageKey.CHUNK_LOADED_WITH_COORDS,
+                                                    key.x(), key.z(), count, totalChunks));
+                                        }
                                     }
                                 });
                             })
@@ -634,9 +654,10 @@ public class TeleportService {
             return;
         }
         float progress = Math.min(1.0f, Math.max(0.0f, (float) loadedChunks / totalChunks));
+        int percent = Math.min(100, Math.max(0, Math.round(progress * 100.0f)));
         for (Map.Entry<LanguageService.Language, ServerBossEvent> entry : currentBossBars.entrySet()) {
             ServerBossEvent bossBar = entry.getValue();
-            bossBar.setName(Messages.get(entry.getKey(), Messages.MessageKey.LOADING_CHUNKS)
+            bossBar.setName(Messages.get(entry.getKey(), Messages.MessageKey.LOADING_CHUNKS_PERCENT, percent)
                     .copy()
                     .withStyle(ChatFormatting.WHITE));
             bossBar.setProgress(progress);
@@ -732,6 +753,10 @@ public class TeleportService {
         if (newBar != null) {
             newBar.addPlayer(player);
         }
+    }
+
+    public void setDebugEnabled(boolean debugEnabled) {
+        this.debugEnabled = debugEnabled;
     }
 
     private void trackOperation(CompletableFuture<?> future) {

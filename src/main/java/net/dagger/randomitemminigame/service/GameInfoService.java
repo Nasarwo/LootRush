@@ -95,4 +95,14 @@ public class GameInfoService {
 			bar.progress(0.0f);
 		}
 	}
+
+	public void setProgress(double progress) {
+		if (bossBars.isEmpty()) {
+			return;
+		}
+		float clamped = (float) Math.max(0.0, Math.min(1.0, progress));
+		for (BossBar bar : bossBars.values()) {
+			bar.progress(clamped);
+		}
+	}
 }

@@ -4,24 +4,24 @@
 
 ## English
 
-A mini-game for Minecraft servers based on Paper 1.21, where players compete to be the first to obtain a random item.
+A mini-game for Minecraft servers based on Paper, where players compete to be the first to obtain a random item.
 
 ### Main Features
 
 - **Random Item** - the system automatically selects an item from the pool of available items
 - **Role System** - support for player and spectator roles
 - **Lives System** - each player has 5 lives, loses one life upon death
-- **Random Teleportations** - players randomly swap positions every 5 minutes (first teleportation after 4:50)
+- **Random Teleportations** - players randomly swap positions every 5 minutes
 - **Safe Teleportation** - automatic search for safe locations for players
 - **Damage Protection** - players receive invincibility for 25 seconds after teleportation
 - **Multi-language Support** - available in English, Russian, and Ukrainian
 
 ### Installation
 
-1. Download the latest version of the plugin from Releases
-2. Place the `LootRush.jar` file in your server's `plugins` folder
-3. Restart the server
-4. The plugin is ready to use!
+1. Download the latest version of the plugin from Modrinth/CurseForge (you can also use Releases)
+2. Place the `LootRush.jar` file in your server's `plugins` folder or in the `mods` folder for the mod
+3. Restart the server or the game for the mod
+4. The plugin/mod is ready to use!
 
 ### Configuration
 
@@ -49,11 +49,29 @@ banned-items:
   # ... and others
 ```
 
+### Mod Configuration (NeoForge)
+
+The mod uses the standard NeoForge config file: `config/lootrush-common.toml`.
+
+Example:
+
+```toml
+swap-interval-seconds = 300
+scatter-min-coord = 10000
+scatter-max-coord = 100000
+
+banned-items = [
+  "minecraft:bedrock",
+  "minecraft:barrier",
+  "REGEX:.*_spawn_egg"
+]
+```
+
 ### Requirements
 
 - **Minecraft**: 1.21.x
-- **Server**: Paper/Bukkit 1.21.8 or higher
-- **Java**: 21 or higher
+- **Server**: Paper/Bukkit 1.21 or higher
+- **Java**: 17 or higher
 
 ### Commands
 
@@ -67,18 +85,13 @@ Main command for managing the mini-game.
 
     - Teleports all players with the "player" role to random locations
     - Selects a random item
-    - Starts a 5-second countdown
+    - Starts a 10-second countdown
 
 - `/lootrush stop` - stops the current game
 
     - Clears all game data
     - Returns players to spawn
     - Clears inventories
-
-- `/lootrush cancel` - cancels countdown or loading
-
-    - Used to interrupt the game start process
-    - Cancels all teleportation operations and chunk loading
 
 - `/lootrush status` - shows the current game status
 
@@ -88,7 +101,6 @@ Main command for managing the mini-game.
 - `/lootrush skip` - skips the current item (only during active game)
 
     - Selects a new random item
-    - Removes the old item from players' inventories
 
 - `/lootrush role <player|spectator> [player|selector]` - changes a player's role
     - `player` - player participates in the mini-game
@@ -96,10 +108,13 @@ Main command for managing the mini-game.
     - If role is not specified, the command applies to the executor (players only)
     - Supports Minecraft selectors (@a, @p, @r, @s, @e[type=player])
 
-- `/lootrush lang <en|ru|uk>` - changes language
+- `/lootrush lang <en|ru|ua>` - changes language
     - `en` - English
     - `ru` - Russian
-    - `ua` (or `uk`) - Ukrainian
+    - `ua` - Ukrainian
+
+- `/lootrush debug` - toggles debug mode
+    - Enables extra logs for chunk loading and safe location search
 
 ##### Permissions
 
@@ -162,11 +177,9 @@ Main command for managing the mini-game.
 
 #### Random Teleportations
 
-- First teleportation occurs 4 minutes 50 seconds after the game starts
-- Subsequent teleportations occur every 5 minutes
-- Players receive warnings 1 minute, 30 seconds, and 10 seconds before teleportation
-- After teleportation, players receive invincibility for 10 seconds
-- Player inventories are cleared after each teleportation
+- Teleportation happens at the swap interval
+- The target item bossbar shows progress to the next swap
+- After teleportation, players receive invincibility for 25 seconds
 
 #### Item Selection
 
@@ -179,11 +192,12 @@ The plugin automatically filters items, excluding:
 ### Known Limitations
 
 - Teleportation may take some time with a large number of players due to chunk loading
+- Chunk loading speed depends on the host disk
 - The game works only in the overworld (not in Nether/End)
 
 ### License
 
-This project is created for personal use. All rights reserved.
+MIT License
 
 ### Author
 
@@ -195,24 +209,24 @@ For questions and suggestions, please create an issue in the project repository.
 
 ## Русский
 
-Мини-игра для Minecraft серверов на базе Paper 1.21, в которой игроки соревнуются, кто первым добудет случайный предмет.
+Мини-игра для Minecraft серверов на базе Paper, в которой игроки соревнуются, кто первым добудет случайный предмет.
 
 ### Основные функции
 
 - **Случайный предмет** - система автоматически выбирает предмет из пула доступных предметов
 - **Система ролей** - поддержка ролей игрока и наблюдателя
 - **Система жизней** - каждый игрок имеет 5 жизней, после смерти теряет одну жизнь
-- **Случайные телепортации** - игроки случайно меняются местами каждые 5 минут (первая телепортация через 4:50)
+- **Случайные телепортации** - игроки случайно меняются местами каждые 5 минут
 - **Безопасная телепортация** - автоматический поиск безопасных локаций для игроков
 - **Защита от урона** - игроки получают неуязвимость на 25 секунд после телепортации
 - **Мультиязычность** - поддержка русского, английского и украинского языков
 
 ### Установка
 
-1. Скачайте последнюю версию плагина из Releases
-2. Поместите файл `LootRush.jar` в папку `plugins` вашего сервера
-3. Перезапустите сервер
-4. Плагин готов к использованию!
+1. Скачайте последнюю версию плагина из Modrinth/CurseForge (можно использовать и Releases в репозитории)
+2. Поместите файл `LootRush.jar` в папку `plugins` вашего сервера или в папку `mods` для мода
+3. Перезапустите сервер или игру в случае мода
+4. Плагин/мод готов к использованию!
 
 ### Конфигурация
 
@@ -240,11 +254,29 @@ banned-items:
   # ... и другие
 ```
 
+### Конфигурация мода (NeoForge)
+
+Мод использует стандартный конфиг NeoForge: `config/lootrush-common.toml`.
+
+Пример:
+
+```toml
+swap-interval-seconds = 300
+scatter-min-coord = 10000
+scatter-max-coord = 100000
+
+banned-items = [
+  "minecraft:bedrock",
+  "minecraft:barrier",
+  "REGEX:.*_spawn_egg"
+]
+```
+
 ### Требования
 
 - **Minecraft**: 1.21.x
-- **Сервер**: Paper/Bukkit 1.21.8 или выше
-- **Java**: 21 или выше
+- **Сервер**: Paper/Bukkit 1.21 или выше
+- **Java**: 17 или выше
 
 ### Команди
 
@@ -258,7 +290,7 @@ banned-items:
 
     - Телепортирует всех игроков с ролью "player" на случайные локации
     - Выбирает случайный предмет
-    - Начинает отсчёт 5 секунд
+    - Начинает отсчёт 10 секунд
 
 - `/lootrush stop` - останавливает текущую игру
 
@@ -266,20 +298,14 @@ banned-items:
     - Возвращает игроков на спавн
     - Очищает инвентари
 
-- `/lootrush cancel` - отменяет отсчёт или загрузку
-
-    - Используется для прерывания процесса начала игры
-    - Отменяет все операции телепортации и загрузки чанков
-
 - `/lootrush status` - показывает текущий статус игры
 
     - Показывает текущее состояние (IDLE, COUNTDOWN, ACTIVE)
-    - Показывает текущий целевой предмет
+    - Показывает текущий искомый предмет
 
 - `/lootrush skip` - пропускает текущий предмет (только во время активной игры)
 
     - Выбирает новый случайный предмет
-    - Удаляет старый предмет из инвентарей игроков
 
 - `/lootrush role <player|spectator> [игрок|селектор]` - изменяет роль игрока
     - `player` - игрок участвует в мини-игре
@@ -290,7 +316,10 @@ banned-items:
 - `/lootrush lang <ru|en|ua>` - изменяет язык
     - `ru` - Русский
     - `en` - Английский
-    - `ua` (или `uk`) - Украинский
+    - `ua` - Украинский
+
+- `/lootrush debug` - переключает режим отладки
+    - Включает дополнительные логи для загрузки чанков и поиска безопасных локаций
 
 ##### Разрешения
 
@@ -314,7 +343,7 @@ banned-items:
 
 3. Игроки будут телепортированы на случайные локации, и начнётся отсчёт
 
-4. Первый игрок, который добудет целевой предмет, побеждает!
+4. Первый игрок, который добудет искомый предмет, побеждает!
 
 #### Примеры использования
 
@@ -353,11 +382,9 @@ banned-items:
 
 #### Случайные телепортации
 
-- Первая телепортация происходит через 4 минуты 50 секунд после начала игры
-- Последующие телепортации происходят каждые 5 минут
-- Игроки получают предупреждение за 1 минуту, 30 секунд и 10 секунд до телепортации
+- Телепортация происходит через интервал свапа
+- Боссбар цели отсчитывает время до следующего свапа
 - После телепортации игроки получают неуязвимость на 25 секунд
-- Инвентарь игроков очищается после каждой телепортации
 
 #### Выбор предметов
 
@@ -370,11 +397,12 @@ banned-items:
 ### Известные ограничения
 
 - Телепортация может занять некоторое время при большом количестве игроков из-за загрузки чанков
+- Скорость загрузки чанков зависит от диска хоста
 - Игра работает только в обычном мире (не в Nether/End)
 
 ### Лицензия
 
-Этот проект создан для личного использования. Все права защищены.
+MIT License
 
 ### Автор
 

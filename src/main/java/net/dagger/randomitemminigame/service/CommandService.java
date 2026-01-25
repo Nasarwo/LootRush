@@ -18,8 +18,8 @@ public class CommandService implements TabCompleter {
 	private final Consumer<CommandSender> handleStart;
 	private final Consumer<CommandSender> handleStop;
 	private final Consumer<CommandSender> handleStatus;
-	private final Consumer<CommandSender> handleCancel;
 	private final Consumer<CommandSender> handleSkip;
+	private final Consumer<CommandSender> handleDebug;
 	private final Consumer<CommandSenderAndArgs> handleRole;
 	private final Consumer<CommandSenderAndArgs> handleLang;
 
@@ -28,16 +28,16 @@ public class CommandService implements TabCompleter {
 			Consumer<CommandSender> handleStart,
 			Consumer<CommandSender> handleStop,
 			Consumer<CommandSender> handleStatus,
-			Consumer<CommandSender> handleCancel,
 			Consumer<CommandSender> handleSkip,
+			Consumer<CommandSender> handleDebug,
 			Consumer<CommandSenderAndArgs> handleRole,
 			Consumer<CommandSenderAndArgs> handleLang) {
 		this.languageService = languageService;
 		this.handleStart = handleStart;
 		this.handleStop = handleStop;
 		this.handleStatus = handleStatus;
-		this.handleCancel = handleCancel;
 		this.handleSkip = handleSkip;
+		this.handleDebug = handleDebug;
 		this.handleRole = handleRole;
 		this.handleLang = handleLang;
 	}
@@ -62,11 +62,11 @@ public class CommandService implements TabCompleter {
 		case "role":
 			handleRole.accept(new CommandSenderAndArgs(sender, args));
 			return true;
-		case "cancel":
-			handleCancel.accept(sender);
-			return true;
 		case "skip":
 			handleSkip.accept(sender);
+			return true;
+		case "debug":
+			handleDebug.accept(sender);
 			return true;
 		case "lang":
 			handleLang.accept(new CommandSenderAndArgs(sender, args));
@@ -87,13 +87,13 @@ public class CommandService implements TabCompleter {
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("start", "stop", "status", "role", "cancel", "skip", "lang").stream()
+			return Arrays.asList("start", "stop", "status", "role", "skip", "debug", "lang").stream()
 					.filter(option -> option.startsWith(args[0].toLowerCase(Locale.ROOT)))
 					.collect(Collectors.toList());
 		}
 
 		if (args.length == 2 && "lang".equalsIgnoreCase(args[0])) {
-			return Arrays.asList("ru", "en", "uk", "ua").stream()
+			return Arrays.asList("ru", "en", "ua").stream()
 					.filter(option -> option.startsWith(args[1].toLowerCase(Locale.ROOT)))
 					.collect(Collectors.toList());
 		}

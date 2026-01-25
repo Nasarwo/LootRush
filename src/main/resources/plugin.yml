@@ -1,6 +1,6 @@
 main: net.dagger.randomitemminigame.LootRushMod
 name: LootRush
-version: 1.3
+version: 1.4
 description: Мини-игра в которой нужно найти случайный предмет и подставлять противников перед телепортом
 authors: [nasarwo]
 website:
@@ -10,7 +10,7 @@ load: STARTUP
 commands:
   lootrush:
     description: Управление мини-игрой
-    usage: /lootrush <start|stop|status|role|cancel|skip|lang>
+    usage: /lootrush <start|stop|status|role|skip|debug|lang>
     aliases: [lr]
     permission: lootrush.admin
 
