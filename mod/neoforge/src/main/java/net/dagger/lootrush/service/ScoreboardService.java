@@ -15,7 +15,7 @@ import java.util.UUID;
 
 public class ScoreboardService {
     private final LanguageService languageService;
-    private static final String OBJECTIVE_PREFIX = "lootrush_";
+    private static final String OBJECTIVE_PREFIX = "lr";
     private final Map<UUID, Objective> playerObjectives = new HashMap<>();
     private final Map<UUID, String> lastTimerKeys = new HashMap<>();
 
@@ -39,7 +39,8 @@ public class ScoreboardService {
 
     private void createPlayerScoreboard(ServerScoreboard scoreboard, ServerPlayer viewer, Map<UUID, Integer> playerLives, Collection<ServerPlayer> allPlayers) {
         LanguageService.Language playerLang = languageService.getLanguage(viewer);
-        String objectiveName = OBJECTIVE_PREFIX + viewer.getUUID().toString().substring(0, 12);
+        String compactId = viewer.getUUID().toString().replace("-", "");
+        String objectiveName = OBJECTIVE_PREFIX + compactId.substring(0, 14);
         Objective objective = scoreboard.addObjective(
                 objectiveName,
                 ObjectiveCriteria.DUMMY,
@@ -87,6 +88,17 @@ public class ScoreboardService {
             }
             lastTimerKeys.remove(viewer.getUUID());
         }
+    }
+
+    public void updateLanguage(ServerScoreboard scoreboard, ServerPlayer viewer, LanguageService.Language newLang) {
+        if (viewer == null || newLang == null) {
+            return;
+        }
+        Objective objective = playerObjectives.get(viewer.getUUID());
+        if (objective == null) {
+            return;
+        }
+        objective.setDisplayName(Messages.get(newLang, Messages.MessageKey.LIVES));
     }
 
     public void removePlayer(ServerScoreboard scoreboard, ServerPlayer player) {

@@ -327,6 +327,9 @@ public class LootRushGameManager {
             languageService.setLanguage(player, newLang);
             teleportService.onPlayerLanguageChanged(player, oldLang, newLang);
             gameInfoService.updateLanguage(player, oldLang, newLang);
+            if (server != null) {
+                scoreboardService.updateLanguage(server.getScoreboard(), player, newLang);
+            }
             String langName;
             if (newLang == LanguageService.Language.EN) {
                 langName = "English";
@@ -507,7 +510,7 @@ public class LootRushGameManager {
             }
         }
 
-        List<ServerPlayer> alive = winService.getAlivePlayers(server.getPlayerList().getPlayers());
+        List<ServerPlayer> alive = getPlayersWithLives();
         if (alive.size() == 1) {
             ServerPlayer winner = alive.get(0);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -548,6 +551,15 @@ public class LootRushGameManager {
         resetPlayersAfterGame();
         stopGame(false);
         playSoundForAll(SoundEvents.WITHER_DEATH, 1.0f, 1.0f);
+    }
+
+    private List<ServerPlayer> getPlayersWithLives() {
+        if (server == null) {
+            return new ArrayList<>();
+        }
+        return server.getPlayerList().getPlayers().stream()
+                .filter(player -> roleService.getRole(player) == Role.PLAYER && livesService.hasLives(player))
+                .collect(Collectors.toList());
     }
 
     @SubscribeEvent
@@ -671,8 +683,7 @@ public class LootRushGameManager {
     }
 
     private List<ServerPlayer> getActiveParticipants() {
-        if (server == null) return new ArrayList<>();
-        return winService.getAlivePlayers(server.getPlayerList().getPlayers());
+        return getPlayersWithLives();
     }
 
     private MutableComponent formatItem(Item item) {

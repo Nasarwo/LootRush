@@ -86,6 +86,17 @@ public class ScoreboardService {
 			lastTimerKeys.remove(playerId);
 		}
 	}
+	
+	public void updateLanguage(Player viewer, LanguageService.Language newLang) {
+		if (viewer == null || newLang == null) {
+			return;
+		}
+		Objective objective = playerObjectives.get(viewer.getUniqueId());
+		if (objective == null) {
+			return;
+		}
+		objective.displayName(Messages.get(newLang, Messages.MessageKey.LIVES));
+	}
 
 	public void removePlayer(Player player) {
 		UUID playerId = player.getUniqueId();

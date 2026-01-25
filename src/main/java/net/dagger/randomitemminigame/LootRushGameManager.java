@@ -368,6 +368,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			languageService.setLanguage(player, newLang);
 			teleportService.onPlayerLanguageChanged(player, oldLang, newLang);
 			gameInfoService.updateLanguage(player, oldLang, newLang);
+			scoreboardService.updateLanguage(player, newLang);
 			String langName;
 			if (newLang == LanguageService.Language.EN) {
 				langName = "English";
@@ -704,7 +705,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			return;
 		}
 
-		List<Player> alivePlayers = winService.getAlivePlayers();
+		List<Player> alivePlayers = getPlayersWithLives();
 
 		if (alivePlayers.size() == 1) {
 			Player winner = alivePlayers.get(0);
@@ -722,9 +723,15 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		}
 	}
 
+	private List<Player> getPlayersWithLives() {
+		return Bukkit.getOnlinePlayers().stream()
+				.filter(player -> roleService.getRole(player) == Role.PLAYER && livesService.hasLives(player))
+				.collect(Collectors.toList());
+	}
+
 
 	private List<Player> getActiveParticipants() {
-		return winService.getAlivePlayers();
+		return getPlayersWithLives();
 	}
 
 }

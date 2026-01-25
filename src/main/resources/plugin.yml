@@ -1,6 +1,6 @@
 main: net.dagger.randomitemminigame.LootRushMod
 name: LootRush
-version: 1.4
+version: 1.4.1
 description: Мини-игра в которой нужно найти случайный предмет и подставлять противников перед телепортом
 authors: [nasarwo]
 website:
