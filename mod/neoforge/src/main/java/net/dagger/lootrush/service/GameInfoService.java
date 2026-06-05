@@ -9,6 +9,7 @@ import net.minecraft.world.item.Item;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class GameInfoService {
     private final LanguageService languageService;
@@ -26,7 +27,7 @@ public class GameInfoService {
         for (LanguageService.Language lang : LanguageService.Language.values()) {
             Component title = Component.translatable(item.getDescriptionId()).withStyle(ChatFormatting.WHITE);
 
-            ServerBossEvent bossBar = new ServerBossEvent(title, BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.PROGRESS);
+            ServerBossEvent bossBar = new ServerBossEvent(UUID.randomUUID(), title, BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.PROGRESS);
             bossBar.setProgress(0.0f);
             bossBars.put(lang, bossBar);
         }

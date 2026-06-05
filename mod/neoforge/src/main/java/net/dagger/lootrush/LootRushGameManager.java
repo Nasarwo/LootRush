@@ -30,7 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -55,6 +55,7 @@ public class LootRushGameManager {
     private final ScoreboardService scoreboardService;
     private final TimerService timerService;
     private final WinService winService;
+    private final WinCountService winCountService;
     private final GameInfoService gameInfoService;
 
     private MinecraftServer server;
@@ -75,6 +76,7 @@ public class LootRushGameManager {
         this.scoreboardService = new ScoreboardService(languageService);
         this.timerService = new TimerService(scoreboardService);
         this.winService = new WinService(roleService);
+        this.winCountService = new WinCountService(languageService);
         this.gameInfoService = new GameInfoService(languageService);
 
         this.teleportService = new TeleportService(languageService, scatterMinCoord, scatterMaxCoord);
@@ -90,6 +92,12 @@ public class LootRushGameManager {
 
     public void setServer(MinecraftServer server) {
         this.server = server;
+        if (winCountService != null) {
+            winCountService.setServer(server);
+            if (server != null) {
+                server.execute(() -> winCountService.updateTabListForAll());
+            }
+        }
     }
 
     private WorldService getWorldService() {
@@ -171,7 +179,11 @@ public class LootRushGameManager {
         targetItem = itemService.pickRandomItem();
         state = GameState.COUNTDOWN;
         roleService.prepareSpectators(spectators);
-        getWorldService().setWorldStateForLoading();
+        try {
+            getWorldService().setWorldStateForLoading();
+        } catch (Exception e) {
+            LootRush.LOGGER.warn("Failed to apply loading world state, continuing with defaults", e);
+        }
         getWorldService().setSafetyBorder();
 
         for (ServerPlayer player : online) {
@@ -329,6 +341,7 @@ public class LootRushGameManager {
             gameInfoService.updateLanguage(player, oldLang, newLang);
             if (server != null) {
                 scoreboardService.updateLanguage(server.getScoreboard(), player, newLang);
+                winCountService.updateTabListForAll();
             }
             String langName;
             if (newLang == LanguageService.Language.EN) {
@@ -531,6 +544,8 @@ public class LootRushGameManager {
 
     private void endGameWithWinner(ServerPlayer winner) {
         if (server != null) {
+            winCountService.addWin(winner);
+            winCountService.updateTabListForAll();
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 LanguageService.Language playerLang = languageService.getLanguage(player);
                 player.sendSystemMessage(Component.empty()
@@ -569,6 +584,7 @@ public class LootRushGameManager {
             if (state == GameState.ACTIVE || state == GameState.COUNTDOWN) {
                 scoreboardService.addViewer(server.getScoreboard(), player, livesService.getAllLives(), server.getPlayerList().getPlayers());
             }
+            winCountService.updateTabListForAll();
         }
     }
 
@@ -619,8 +635,8 @@ public class LootRushGameManager {
     }
 
     @SubscribeEvent
-    public void onBlockBreak(BlockEvent.BreakEvent event) {
-        if (state == GameState.COUNTDOWN && event.getPlayer() instanceof ServerPlayer player && roleService.getRole(player) == Role.PLAYER) {
+    public void onBlockBreak(PlayerInteractEvent.LeftClickBlock event) {
+        if (state == GameState.COUNTDOWN && event.getEntity() instanceof ServerPlayer player && roleService.getRole(player) == Role.PLAYER) {
             event.setCanceled(true);
         }
     }

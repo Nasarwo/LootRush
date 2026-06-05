@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "lootrush",
+	"version": "${version}",
+	"name": "Loot Rush",
+	"description": "Competitive scavenger-race minigame with random target items, lives, swaps, and multilingual UI.",
+	"authors": [
+		"Nasarwo (DaGGeR)"
+	],
+	"contact": {
+		"homepage": "https://github.com/Nasarwo/LootRush",
+		"sources": "https://github.com/Nasarwo/LootRush"
+	},
+	"license": "MIT",
+	"icon": "assets/loot-rush/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.dagger.lootrush.LootRush"
+		],
+        "client": [
+            "net.dagger.lootrush.LootRushClient"
+        ]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~26.1.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

@@ -2,7 +2,7 @@ plugins {
 	id "java"
 }
 
-version = "1.4.1"
+version = "1.5"
 group = "net.dagger.randomitemminigame"
 
 base.archivesName = "plugin"
@@ -11,7 +11,30 @@ def toolsDir = layout.projectDirectory.dir("build/tools")
 def runDir = layout.projectDirectory.dir("run")
 def pluginsDir = runDir.dir("plugins")
 def paperJar = runDir.file("paper.jar")
-def paperVersion = "1.21.11"
+def paperVersion = "26.1.2"
+
+def resolvePaperDownloadUrl = {
+	def candidates = [
+		"https://api.papermc.io/v2/projects/paper/versions/${paperVersion}",
+		"https://fill.papermc.io/v3/projects/paper/versions/${paperVersion}"
+	]
+	Exception lastError = null
+	for (def apiUrl : candidates) {
+		try {
+			def versionInfo = new groovy.json.JsonSlurper().parse(new URL(apiUrl))
+			def builds = versionInfo?.builds
+			if (builds instanceof List && !builds.isEmpty()) {
+				def build = builds[-1]
+				return "https://api.papermc.io/v2/projects/paper/versions/${paperVersion}/builds/${build}/downloads/paper-${paperVersion}-${build}.jar"
+			}
+		} catch (Exception e) {
+			lastError = e
+		}
+	}
+	throw new GradleException("Could not resolve Paper download URL for version ${paperVersion}. " +
+			"If Paper changed API endpoints, download paper.jar manually into run/paper.jar. " +
+			"Last error: ${lastError?.message ?: 'unknown'}")
+}
 
 repositories {
 	mavenCentral()
@@ -19,18 +42,20 @@ repositories {
 		name = "papermc-repo"
 		url = "https://repo.papermc.io/repository/maven-public/"
 	}
-	maven {
-		name = "dmulloy2-repo"
-		url = "https://repo.dmulloy2.net/repository/public/"
-	}
 }
 
 dependencies {
-	compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+	compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+	testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
+	testImplementation(platform("org.junit:junit-bom:5.12.2"))
+	testImplementation("org.junit.jupiter:junit-jupiter")
+	testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
+	testImplementation("org.mockito:mockito-core:4.11.0")
+	testImplementation("org.mockito:mockito-junit-jupiter:4.11.0")
 }
 
 
-def javaVersion = JavaVersion.VERSION_21
+def javaVersion = JavaVersion.VERSION_25
 
 java {
 	sourceCompatibility = javaVersion
@@ -41,6 +66,10 @@ java {
 tasks.withType(JavaCompile).configureEach {
 	options.release = javaVersion.toString() as Integer
 	options.compilerArgs += ['-Xlint:-removal']
+}
+
+tasks.withType(Test).configureEach {
+	useJUnitPlatform()
 }
 
 tasks.register('prepareDirs') {
@@ -57,12 +86,40 @@ tasks.register('downloadPaper') {
 
 	doLast {
 		if (!paperJar.asFile.exists()) {
-			def apiUrl = "https://api.papermc.io/v2/projects/paper/versions/${paperVersion}"
-			def versionInfo = new groovy.json.JsonSlurper().parse(new URL(apiUrl))
-			def build = versionInfo.builds[-1]
-			def downloadUrl = "https://api.papermc.io/v2/projects/paper/versions/${paperVersion}/builds/${build}/downloads/paper-${paperVersion}-${build}.jar"
+			try {
+				def downloadUrl = project.findProperty("paperDownloadUrl")?.toString() ?: resolvePaperDownloadUrl()
+				new URL(downloadUrl).withInputStream { i ->
+					paperJar.asFile.withOutputStream { it << i }
+				}
+			} catch (Exception e) {
+				throw new GradleException("Unable to download Paper ${paperVersion}. " +
+						"Provide -PpaperDownloadUrl=<direct-url> or put paper.jar in run/. " +
+						"Reason: ${e.message}", e)
+			}
+		}
+	}
+}
+
+// Скачать свежую сборку Paper (убирает предупреждение "you've not updated in a while")
+tasks.register('updatePaper') {
+	group 'paper'
+	dependsOn 'prepareDirs'
+
+	doLast {
+		try {
+			def downloadUrl = project.findProperty("paperDownloadUrl")?.toString() ?: resolvePaperDownloadUrl()
+			println "Downloading Paper ${paperVersion}..."
 			new URL(downloadUrl).withInputStream { i ->
 				paperJar.asFile.withOutputStream { it << i }
+			}
+			println "Paper jar updated: run/paper.jar"
+		} catch (Exception e) {
+			if (paperJar.asFile.exists()) {
+				println "Could not update Paper from API, keeping existing run/paper.jar."
+				println "Reason: ${e.message}"
+			} else {
+				throw new GradleException("Unable to process Paper URL for ${paperVersion}. " +
+						"Use -PpaperDownloadUrl=<direct-url> or manually place run/paper.jar.", e)
 			}
 		}
 	}
@@ -81,8 +138,9 @@ tasks.register('copyPlugin', Copy) {
 	group 'paper'
 	dependsOn tasks.named('jar')
 
-	from layout.buildDirectory.file("libs/plugin.jar")
+	from tasks.named('jar').flatMap { it.archiveFile }
 	into layout.projectDirectory.dir("run/plugins")
+	rename { "plugin.jar" }
 }
 
 tasks.register('runPaperServer', Exec) {
@@ -92,16 +150,6 @@ tasks.register('runPaperServer', Exec) {
 
 	workingDir = file("run")
 	commandLine = ["java", "-jar", paperJar] as List<String>
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
-}
-
-java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
 }
 
 processResources {

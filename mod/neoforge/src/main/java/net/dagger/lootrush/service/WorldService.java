@@ -17,7 +17,6 @@ public class WorldService {
         if (server == null) return;
         server.setDifficulty(Difficulty.PEACEFUL, true);
         for (ServerLevel level : server.getAllLevels()) {
-            level.setDayTime(0);
             level.getGameRules().set(GameRules.ADVANCE_TIME, false, server);
             level.getGameRules().set(GameRules.ADVANCE_WEATHER, false, server);
         }

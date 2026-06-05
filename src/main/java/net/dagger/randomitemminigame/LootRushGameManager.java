@@ -13,6 +13,7 @@ import net.dagger.randomitemminigame.service.ScoreboardService;
 import net.dagger.randomitemminigame.service.SwapService;
 import net.dagger.randomitemminigame.service.TeleportService;
 import net.dagger.randomitemminigame.service.TimerService;
+import net.dagger.randomitemminigame.service.WinCountService;
 import net.dagger.randomitemminigame.service.WinService;
 import net.dagger.randomitemminigame.service.WorldService;
 import net.kyori.adventure.text.Component;
@@ -42,10 +43,13 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
+
 public class LootRushGameManager implements Listener, CommandExecutor, TabCompleter {
 	private static final int COUNTDOWN_SECONDS = 10;
 
@@ -59,6 +63,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 	private final ScoreboardService scoreboardService;
 	private final TimerService timerService;
 	private final WinService winService;
+	private final WinCountService winCountService;
 	private final WorldService worldService;
 	private final CommandService commandService;
 	private final GameInfoService gameInfoService;
@@ -78,6 +83,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		this.scoreboardService = new ScoreboardService(languageService);
 		this.timerService = new TimerService(plugin, scoreboardService);
 		this.winService = new WinService(roleService);
+		this.winCountService = new WinCountService(plugin, languageService);
 		this.worldService = new WorldService();
 		this.gameInfoService = new GameInfoService(languageService);
 		this.teleportService = new TeleportService(plugin, languageService, this::broadcastToParticipants, minScatterCoord, maxScatterCoord);
@@ -97,7 +103,10 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 				this::handleSkip,
 				this::handleDebug,
 				args -> handleRole(args.sender, args.args),
-				args -> handleLang(args.sender, args.args));
+				args -> handleLang(args.sender, args.args),
+				args -> handleBanlist(args.sender, args.args),
+				() -> itemService.getBannedItems());
+		Bukkit.getScheduler().runTask(plugin, () -> winCountService.updateTabListForAll());
 	}
 
 	@Override
@@ -133,7 +142,11 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		targetItem = itemService.pickRandomItem();
 		state = GameState.COUNTDOWN;
 		roleService.prepareSpectators(spectators);
-		worldService.setWorldStateForLoading();
+		try {
+			worldService.setWorldStateForLoading();
+		} catch (Exception e) {
+			plugin.getLogger().log(Level.WARNING, "Failed to apply loading world state, continuing with defaults", e);
+		}
 		worldService.setSafetyBorder();
 
 		for (Player player : online) {
@@ -208,7 +221,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 
 	private void handleSkip(CommandSender sender) {
 		LanguageService.Language lang = getLanguage(sender);
-		if (state != GameState.ACTIVE && state != GameState.COUNTDOWN) {
+		if (state == GameState.IDLE) {
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.GAME_NOT_ACTIVE));
 			return;
 		}
@@ -273,7 +286,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 
 	private void handleRole(CommandSender sender, String[] args) {
 		LanguageService.Language lang = getLanguage(sender);
-		if (!sender.hasPermission("randomitemminigame.admin")) {
+		if (!sender.hasPermission("lootrush.admin")) {
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_PERMISSION_ROLE));
 			return;
 		}
@@ -369,6 +382,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 			teleportService.onPlayerLanguageChanged(player, oldLang, newLang);
 			gameInfoService.updateLanguage(player, oldLang, newLang);
 			scoreboardService.updateLanguage(player, newLang);
+			winCountService.updateTabListForAll();
 			String langName;
 			if (newLang == LanguageService.Language.EN) {
 				langName = "English";
@@ -384,6 +398,71 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		}
 	}
 
+	private void handleBanlist(CommandSender sender, String[] args) {
+		LanguageService.Language lang = getLanguage(sender);
+		if (!sender.hasPermission("lootrush.admin")) {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.NO_PERMISSION_ROLE));
+			return;
+		}
+
+		if (args.length == 1) {
+			List<String> banned = itemService.getBannedItems();
+			if (banned.isEmpty()) {
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_EMPTY));
+				return;
+			}
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_HEADER, banned.size()));
+			for (String entry : banned) {
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_ENTRY, entry));
+			}
+			return;
+		}
+
+		if (args.length < 3) {
+			sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_USAGE));
+			return;
+		}
+
+		String action = args[1].toLowerCase(Locale.ROOT);
+		String entry = args[2];
+		boolean changed;
+		if ("add".equals(action)) {
+			changed = itemService.addBannedItem(entry);
+			if (changed) {
+				updateConfigBanList();
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_ADDED, normalizeBanlistEntry(entry)));
+			} else {
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_ADD_FAILED, entry));
+			}
+			return;
+		}
+		if ("remove".equals(action)) {
+			changed = itemService.removeBannedItem(entry);
+			if (changed) {
+				updateConfigBanList();
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_REMOVED, normalizeBanlistEntry(entry)));
+			} else {
+				sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_REMOVE_FAILED, entry));
+			}
+			return;
+		}
+
+		sender.sendMessage(Messages.get(lang, Messages.MessageKey.BANLIST_USAGE));
+	}
+
+	private String normalizeBanlistEntry(String raw) {
+		String trimmed = raw.trim();
+		if (trimmed.regionMatches(true, 0, "REGEX:", 0, 6)) {
+			return "REGEX:" + trimmed.substring(6);
+		}
+		return trimmed.toUpperCase(Locale.ROOT);
+	}
+
+	private void updateConfigBanList() {
+		plugin.getConfig().set("banned-items", itemService.getBannedItems());
+		plugin.saveConfig();
+	}
+
 	private LanguageService.Language getLanguage(CommandSender sender) {
 		if (sender instanceof Player player) {
 			return languageService.getLanguage(player);
@@ -397,6 +476,7 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		if (state == GameState.ACTIVE || state == GameState.COUNTDOWN) {
 			scoreboardService.addViewer(event.getPlayer(), livesService.getAllLives());
 		}
+		winCountService.updateTabListForAll();
 	}
 
 	@EventHandler
@@ -575,6 +655,8 @@ public class LootRushGameManager implements Listener, CommandExecutor, TabComple
 		livesService.clear();
 		scoreboardService.clear();
 		gameInfoService.hide();
+		winCountService.addWin(winner);
+		winCountService.updateTabListForAll();
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			LanguageService.Language playerLang = languageService.getLanguage(player);
 			player.sendMessage(Component.text()

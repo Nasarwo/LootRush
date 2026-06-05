@@ -7,44 +7,96 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 
 public class ItemService {
+	private static final Logger LOGGER = Logger.getLogger(ItemService.class.getName());
 
-	private final List<Material> itemPool;
+	private final Set<Material> bannedMaterials = new HashSet<>();
+	private final List<Pattern> bannedPatterns = new ArrayList<>();
+	private final List<String> bannedItemsRaw = new ArrayList<>();
+	private List<Material> itemPool;
 	private final Random random = new Random();
 
 	public ItemService(List<String> bannedItems) {
-		Set<Material> bannedMaterials = new HashSet<>();
-		List<Pattern> bannedPatterns = new ArrayList<>();
-
 		for (String item : bannedItems) {
-			if (item.startsWith("REGEX:")) {
-				try {
-					bannedPatterns.add(Pattern.compile(item.substring(6)));
-				} catch (Exception e) {
-					Bukkit.getLogger().warning("Invalid regex pattern in banned-items: " + item);
-				}
-			} else {
-				try {
-					bannedMaterials.add(Material.valueOf(item.toUpperCase()));
-				} catch (IllegalArgumentException e) {
-					Bukkit.getLogger().warning("Invalid material name in banned-items: " + item);
-				}
+			addBannedItem(item);
+		}
+		rebuildPool();
+	}
+
+	public synchronized boolean addBannedItem(String item) {
+		if (item == null || item.isBlank()) {
+			return false;
+		}
+		String normalized = normalizeEntry(item);
+		if (bannedItemsRaw.contains(normalized)) {
+			return false;
+		}
+		if (normalized.startsWith("REGEX:")) {
+			try {
+				bannedPatterns.add(Pattern.compile(normalized.substring(6)));
+			} catch (Exception e) {
+				LOGGER.warning("Invalid regex pattern in banned-items: " + normalized);
+				return false;
+			}
+		} else {
+			try {
+				bannedMaterials.add(Material.valueOf(normalized));
+			} catch (IllegalArgumentException e) {
+				LOGGER.warning("Invalid material name in banned-items: " + normalized);
+				return false;
 			}
 		}
+		bannedItemsRaw.add(normalized);
+		rebuildPool();
+		return true;
+	}
 
+	public synchronized boolean removeBannedItem(String item) {
+		if (item == null || item.isBlank()) {
+			return false;
+		}
+		String normalized = normalizeEntry(item);
+		if (!bannedItemsRaw.remove(normalized)) {
+			return false;
+		}
+		if (normalized.startsWith("REGEX:")) {
+			String regex = normalized.substring(6);
+			bannedPatterns.removeIf(pattern -> pattern.pattern().equals(regex));
+		} else {
+			try {
+				bannedMaterials.remove(Material.valueOf(normalized));
+			} catch (IllegalArgumentException ignored) {
+			}
+		}
+		rebuildPool();
+		return true;
+	}
+
+	public synchronized List<String> getBannedItems() {
+		return new ArrayList<>(bannedItemsRaw);
+	}
+
+	private String normalizeEntry(String raw) {
+		String trimmed = raw.trim();
+		if (trimmed.regionMatches(true, 0, "REGEX:", 0, 6)) {
+			return "REGEX:" + trimmed.substring(6);
+		}
+		return trimmed.toUpperCase();
+	}
+
+	private synchronized void rebuildPool() {
 		this.itemPool = Collections.unmodifiableList(
-				Arrays.stream(Material.values())
-						.filter(material -> isSurvivalObtainable(material, bannedMaterials, bannedPatterns))
-						.collect(Collectors.toList())
+			Arrays.stream(Material.values())
+				.filter(this::isSurvivalObtainable)
+				.collect(Collectors.toList())
 		);
-
-		Bukkit.getLogger().info("Item pool size: " + itemPool.size());
+		LOGGER.info("Item pool size: " + itemPool.size());
 	}
 
 	public Material pickRandomItem() {
@@ -62,7 +114,7 @@ public class ItemService {
 		return itemPool.size();
 	}
 
-	private boolean isSurvivalObtainable(Material material, Set<Material> bannedMaterials, List<Pattern> bannedPatterns) {
+	private boolean isSurvivalObtainable(Material material) {
 		if (!material.isItem()) {
 			return false;
 		}

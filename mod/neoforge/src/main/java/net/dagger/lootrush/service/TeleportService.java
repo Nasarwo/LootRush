@@ -618,7 +618,7 @@ public class TeleportService {
             Component title = Messages.get(lang, Messages.MessageKey.SCATTER_BOSS_BAR, 0, totalPlayers)
                     .copy()
                     .withStyle(ChatFormatting.WHITE);
-            ServerBossEvent bossBar = new ServerBossEvent(title, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
+            ServerBossEvent bossBar = new ServerBossEvent(UUID.randomUUID(), title, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
             bossBar.setProgress(totalPlayers == 0 ? 1.0f : 0.0f);
             bossBar.setVisible(true);
             bars.put(lang, bossBar);

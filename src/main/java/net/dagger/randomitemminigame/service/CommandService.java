@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
@@ -22,6 +23,8 @@ public class CommandService implements TabCompleter {
 	private final Consumer<CommandSender> handleDebug;
 	private final Consumer<CommandSenderAndArgs> handleRole;
 	private final Consumer<CommandSenderAndArgs> handleLang;
+	private final Consumer<CommandSenderAndArgs> handleBanlist;
+	private final Supplier<List<String>> banlistEntriesSupplier;
 
 	public CommandService(
 			LanguageService languageService,
@@ -31,7 +34,9 @@ public class CommandService implements TabCompleter {
 			Consumer<CommandSender> handleSkip,
 			Consumer<CommandSender> handleDebug,
 			Consumer<CommandSenderAndArgs> handleRole,
-			Consumer<CommandSenderAndArgs> handleLang) {
+			Consumer<CommandSenderAndArgs> handleLang,
+			Consumer<CommandSenderAndArgs> handleBanlist,
+			Supplier<List<String>> banlistEntriesSupplier) {
 		this.languageService = languageService;
 		this.handleStart = handleStart;
 		this.handleStop = handleStop;
@@ -40,6 +45,8 @@ public class CommandService implements TabCompleter {
 		this.handleDebug = handleDebug;
 		this.handleRole = handleRole;
 		this.handleLang = handleLang;
+		this.handleBanlist = handleBanlist;
+		this.banlistEntriesSupplier = banlistEntriesSupplier;
 	}
 
 	public boolean execute(CommandSender sender, Command command, String label, String[] args) {
@@ -71,6 +78,9 @@ public class CommandService implements TabCompleter {
 		case "lang":
 			handleLang.accept(new CommandSenderAndArgs(sender, args));
 			return true;
+		case "banlist":
+			handleBanlist.accept(new CommandSenderAndArgs(sender, args));
+			return true;
 		default:
 			sender.sendMessage(Messages.get(lang, Messages.MessageKey.UNKNOWN_SUBCOMMAND));
 			return true;
@@ -87,7 +97,7 @@ public class CommandService implements TabCompleter {
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("start", "stop", "status", "role", "skip", "debug", "lang").stream()
+			return Arrays.asList("start", "stop", "status", "role", "skip", "debug", "lang", "banlist").stream()
 					.filter(option -> option.startsWith(args[0].toLowerCase(Locale.ROOT)))
 					.collect(Collectors.toList());
 		}
@@ -119,6 +129,29 @@ public class CommandService implements TabCompleter {
 				}
 			}
 			return completions;
+		}
+
+		if (args.length == 2 && "banlist".equalsIgnoreCase(args[0])) {
+			return Arrays.asList("add", "remove").stream()
+					.filter(option -> option.startsWith(args[1].toLowerCase(Locale.ROOT)))
+					.collect(Collectors.toList());
+		}
+
+		if (args.length == 3 && "banlist".equalsIgnoreCase(args[0])) {
+			String query = args[2].toLowerCase(Locale.ROOT);
+			if ("add".equalsIgnoreCase(args[1])) {
+				return Arrays.stream(org.bukkit.Material.values())
+						.map(Enum::name)
+						.filter(name -> name.toLowerCase(Locale.ROOT).startsWith(query))
+						.limit(50)
+						.collect(Collectors.toList());
+			}
+			if ("remove".equalsIgnoreCase(args[1])) {
+				return banlistEntriesSupplier.get().stream()
+						.filter(entry -> entry.toLowerCase(Locale.ROOT).startsWith(query))
+						.limit(50)
+						.collect(Collectors.toList());
+			}
 		}
 		return new ArrayList<>();
 	}

@@ -73,6 +73,14 @@ public class Messages {
 		UNKNOWN_LANGUAGE("Неизвестный язык. Доступно: ru, en, ua.", "Unknown language. Available: ru, en, ua.", "Невідома мова. Доступно: ru, en, ua.", NamedTextColor.RED),
 		LANGUAGE_SET("Язык изменён на %s.", "Language changed to %s.", "Мову змінено на %s.", NamedTextColor.GREEN),
 		CURRENT_LANGUAGE("Текущий язык: %s", "Current language: %s", "Поточна мова: %s", NamedTextColor.AQUA),
+		BANLIST_USAGE("Использование: /lootrush banlist [add|remove] <item|REGEX:...>", "Usage: /lootrush banlist [add|remove] <item|REGEX:...>", "Використання: /lootrush banlist [add|remove] <item|REGEX:...>", NamedTextColor.YELLOW),
+		BANLIST_EMPTY("Список запрещённых предметов пуст.", "Banlist is empty.", "Список заборонених предметів порожній.", NamedTextColor.GRAY),
+		BANLIST_HEADER("=== Запрещённые предметы (%d) ===", "=== Banned items (%d) ===", "=== Заборонені предмети (%d) ===", NamedTextColor.GOLD),
+		BANLIST_ENTRY("- %s", "- %s", "- %s", NamedTextColor.YELLOW),
+		BANLIST_ADDED("Добавлено в banlist: %s", "Added to banlist: %s", "Додано до banlist: %s", NamedTextColor.GREEN),
+		BANLIST_REMOVED("Удалено из banlist: %s", "Removed from banlist: %s", "Видалено з banlist: %s", NamedTextColor.GREEN),
+		BANLIST_ADD_FAILED("Не удалось добавить (уже есть или неверный формат): %s", "Could not add (already exists or invalid format): %s", "Не вдалося додати (вже є або невірний формат): %s", NamedTextColor.RED),
+		BANLIST_REMOVE_FAILED("Элемент не найден в banlist: %s", "Entry not found in banlist: %s", "Елемент не знайдено в banlist: %s", NamedTextColor.RED),
 		NOW_PARTICIPATING("Теперь вы участвуете в мини-игре.", "You are now participating in the minigame.", "Тепер ви берете участь у міні-грі.", NamedTextColor.GREEN),
 		NOW_SPECTATOR("Вы перешли в режим наблюдателя.", "You switched to spectator mode.", "Ви перейшли в режим спостерігача.", NamedTextColor.AQUA),
 		SPECTATING_ROUND("Вы наблюдаете за раундом как зритель.", "You are spectating the round as a viewer.", "Ви спостерігаєте за раундом як глядач.", NamedTextColor.GRAY),
@@ -119,7 +127,10 @@ public class Messages {
 		RETURNING_TO_SPAWN("Возвращаем на спавн и очищаем инвентарь после раунда.", "Returning to spawn and clearing inventory after the round.", "Повертаємо на спавн і очищаємо інвентар після раунду.", NamedTextColor.GRAY),
 		DEBUG_ENABLED("Режим отладки включён.", "Debug mode enabled.", "Режим відладки увімкнено.", NamedTextColor.GREEN),
 		DEBUG_DISABLED("Режим отладки выключен.", "Debug mode disabled.", "Режим відладки вимкнено.", NamedTextColor.YELLOW),
-		BOSS_BAR_TARGET_ITEM("Найти: ", "Find: ", "Знайти: ", NamedTextColor.WHITE);
+		BOSS_BAR_TARGET_ITEM("Найти: ", "Find: ", "Знайти: ", NamedTextColor.WHITE),
+		LEADERBOARD_TITLE("=== Победители ===", "=== Winners ===", "=== Переможці ===", NamedTextColor.GOLD),
+		LEADERBOARD_LINE("  %d. %s — %d побед", "  %d. %s — %d wins", "  %d. %s — %d перемог", NamedTextColor.YELLOW),
+		LEADERBOARD_EMPTY("Побед пока нет.", "No wins yet.", "Перемог поки немає.", NamedTextColor.GRAY);
 
 		private final String russian;
 		private final String english;

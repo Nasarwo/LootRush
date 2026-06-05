@@ -119,10 +119,13 @@ public class Messages {
         WINS_ROUND(" и выигрывает раунд!", " wins the round!", " і виграє раунд!", ChatFormatting.GOLD),
         RETURNING_TO_SPAWN("Возвращаем на спавн и очищаем инвентарь после раунда.", "Returning to spawn and clearing inventory after the round.", "Повертаємо на спавн і очищаємо інвентар після раунду.", ChatFormatting.GRAY),
         DEBUG_ENABLED("Режим отладки включён.", "Debug mode enabled.", "Режим відладки увімкнено.", ChatFormatting.GREEN),
-        DEBUG_DISABLED("Режим отладки выключен.", "Debug mode disabled.", "Режим відладки вимкнено.", ChatFormatting.YELLOW),
-        BOSS_BAR_TARGET_ITEM("Найти: ", "Find: ", "Знайти: ", ChatFormatting.WHITE);
+		DEBUG_DISABLED("Режим отладки выключен.", "Debug mode disabled.", "Режим відладки вимкнено.", ChatFormatting.YELLOW),
+		BOSS_BAR_TARGET_ITEM("Найти: ", "Find: ", "Знайти: ", ChatFormatting.WHITE),
+		LEADERBOARD_TITLE("=== Побед: Топ ===", "=== Wins: Top ===", "=== Перемог: Топ ===", ChatFormatting.GOLD),
+		LEADERBOARD_LINE("  %d. %s — %d побед", "  %d. %s — %d wins", "  %d. %s — %d перемог", ChatFormatting.YELLOW),
+		LEADERBOARD_EMPTY("Побед пока нет.", "No wins yet.", "Перемог поки немає.", ChatFormatting.GRAY);
 
-        private final String russian;
+		private final String russian;
         private final String english;
         private final String ukrainian;
         private final ChatFormatting defaultColor;

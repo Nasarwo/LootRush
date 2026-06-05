@@ -19,6 +19,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -148,7 +149,7 @@ public class TeleportService {
 					player.getInventory().clear();
 					player.getInventory().setArmorContents(new org.bukkit.inventory.ItemStack[] { null, null, null, null });
 					player.getInventory().setItemInOffHand(null);
-					player.setRespawnLocation(target.location(), true);
+					player.setRespawnLocation(target.location());
 
 					refreshChunksForPlayer(player, target.location());
 
@@ -265,7 +266,7 @@ public class TeleportService {
 		int chunkZ = z >> 4;
 
 		preloadSurroundingChunks(world, chunkX, chunkZ).thenCompose(ignore ->
-				world.getChunkAtAsyncUrgently(chunkX, chunkZ)
+				requestChunkLoad(world, chunkX, chunkZ)
 		).thenAccept(chunk -> {
 			if (cancelled || future.isDone()) {
 				return;
@@ -276,7 +277,7 @@ public class TeleportService {
 					return;
 				}
 
-				int floorY = world.getHighestBlockYAt(x, z);
+				int floorY = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
 				if (floorY <= world.getMinHeight()) {
 					LanguageService.Language defaultLang = languageService.getDefaultLanguage();
 					String message = Messages.getString(defaultLang, Messages.MessageKey.ATTEMPT_Y_TOO_LOW, attempt + 1, playerName, x, z);
@@ -436,7 +437,7 @@ public class TeleportService {
 			int chunkX = Integer.parseInt(parts[1]);
 			int chunkZ = Integer.parseInt(parts[2]);
 
-			CompletableFuture<Chunk> chunkFuture = world.getChunkAtAsyncUrgently(chunkX, chunkZ)
+			CompletableFuture<Chunk> chunkFuture = requestChunkLoad(world, chunkX, chunkZ)
 				.thenApply(chunk -> {
 					if (!cancelled) {
 						Bukkit.getScheduler().runTask(plugin, () -> {
@@ -473,7 +474,7 @@ public class TeleportService {
 						World world = chunkWorlds.get(key);
 						int chunkX = Integer.parseInt(parts[1]);
 						int chunkZ = Integer.parseInt(parts[2]);
-						world.refreshChunk(chunkX, chunkZ);
+						requestChunkLoad(world, chunkX, chunkZ);
 					}
 
 					for (PlayerScatterTarget target : allTargets) {
@@ -504,7 +505,7 @@ public class TeleportService {
 			int chunkX = Integer.parseInt(parts[1]);
 			int chunkZ = Integer.parseInt(parts[2]);
 
-			CompletableFuture<Chunk> chunkFuture = world.getChunkAtAsyncUrgently(chunkX, chunkZ)
+			CompletableFuture<Chunk> chunkFuture = requestChunkLoad(world, chunkX, chunkZ)
 				.thenApply(chunk -> {
 					if (!cancelled) {
 						Bukkit.getScheduler().runTask(plugin, () -> {
@@ -542,8 +543,8 @@ public class TeleportService {
 								World world = chunkWorlds.get(key);
 								int chunkX = Integer.parseInt(parts[1]);
 								int chunkZ = Integer.parseInt(parts[2]);
-							world.refreshChunk(chunkX, chunkZ);
-						}
+								requestChunkLoad(world, chunkX, chunkZ);
+							}
 
 						for (PlayerScatterTarget target : allTargets) {
 								Player player = Bukkit.getPlayer(target.playerId());
@@ -571,7 +572,7 @@ public class TeleportService {
 			for (int dz = -5; dz <= 5; dz++) {
 				int cx = chunkX + dx;
 				int cz = chunkZ + dz;
-				world.refreshChunk(cx, cz);
+				requestChunkLoad(world, cx, cz);
 			}
 		}
 
@@ -584,7 +585,7 @@ public class TeleportService {
 						}
 						int cx = chunkX + dx;
 						int cz = chunkZ + dz;
-						world.refreshChunk(cx, cz);
+						requestChunkLoad(world, cx, cz);
 					}
 				}
 			}
@@ -599,7 +600,7 @@ public class TeleportService {
 						}
 						int cx = chunkX + dx;
 						int cz = chunkZ + dz;
-						world.refreshChunk(cx, cz);
+						requestChunkLoad(world, cx, cz);
 					}
 				}
 			}
@@ -612,7 +613,7 @@ public class TeleportService {
 			for (int dz = -2; dz <= 2; dz++) {
 				int cx = chunkX + dx;
 				int cz = chunkZ + dz;
-				futures.add(world.getChunkAtAsyncUrgently(cx, cz));
+				futures.add(requestChunkLoad(world, cx, cz));
 			}
 		}
 		return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
@@ -621,9 +622,13 @@ public class TeleportService {
 	private void refreshChunksAround(World world, int chunkX, int chunkZ) {
 		for (int dx = -2; dx <= 2; dx++) {
 			for (int dz = -2; dz <= 2; dz++) {
-				world.refreshChunk(chunkX + dx, chunkZ + dz);
+				requestChunkLoad(world, chunkX + dx, chunkZ + dz);
 			}
 		}
+	}
+
+	private CompletableFuture<Chunk> requestChunkLoad(World world, int chunkX, int chunkZ) {
+		return world.getChunkAtAsync(chunkX, chunkZ);
 	}
 
 	private Location fallbackRandomLocation(World world, List<Location> existingLocations) {

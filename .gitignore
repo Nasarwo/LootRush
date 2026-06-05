@@ -2,7 +2,6 @@
 .gradle/
 build/
 bin/
-!gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
@@ -34,6 +33,7 @@ mod/neoforge/build/
 mod/neoforge/bin/
 mod/neoforge/out/
 mod/neoforge/logs/
+EDUC.md
 
 # Logs
 *.log
@@ -63,3 +63,5 @@ Thumbs.db
 
 # Exclude build output but keep source jars
 !build/libs/*-sources.jar
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar

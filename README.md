@@ -5,6 +5,7 @@
 ## English
 
 A mini-game for Minecraft servers based on Paper, where players compete to be the first to obtain a random item.
+Current release line targets Minecraft 26.x across Paper, NeoForge, and Fabric.
 
 ### Main Features
 
@@ -69,9 +70,10 @@ banned-items = [
 
 ### Requirements
 
-- **Minecraft**: 1.21.x
-- **Server**: Paper/Bukkit 1.21 or higher
-- **Java**: 17 or higher
+- **Minecraft**: 26.x (currently tested on 26.1.2)
+- **Server**: Paper 26.x (for plugin mode)
+- **Mod loaders**: NeoForge 26.x, Fabric Loader 0.19.2 + Fabric API 0.150.0+26.1.2
+- **Java**: 25 or higher for Paper 26.x (NeoForge/Fabric targets remain on Java 21)
 
 ### Commands
 
@@ -115,6 +117,10 @@ Main command for managing the mini-game.
 
 - `/lootrush debug` - toggles debug mode
     - Enables extra logs for chunk loading and safe location search
+
+- `/lootrush banlist` - shows current banned items list
+- `/lootrush banlist add <item|REGEX:...>` - adds item/pattern to banlist and saves config
+- `/lootrush banlist remove <item|REGEX:...>` - removes item/pattern from banlist and saves config
 
 ##### Permissions
 
@@ -194,6 +200,19 @@ The plugin automatically filters items, excluding:
 - Teleportation may take some time with a large number of players due to chunk loading
 - Chunk loading speed depends on the host disk
 - The game works only in the overworld (not in Nether/End)
+- Legacy `1.21.x` support is best-effort and maintained via legacy branch/tag snapshots
+- Primary supported line is Minecraft 26.x
+- Fabric version is currently in active development
+
+### Build Matrix
+
+This repository contains three independent Gradle targets:
+
+- **Paper plugin (root project)**: `./gradlew build`
+- **NeoForge mod**: `cd mod/neoforge && ./gradlew build`
+- **Fabric mod**: `cd mod/fabric && ./gradlew build`
+
+CI is configured in root `.github/workflows/build.yml` and builds all three targets.
 
 ### License
 
@@ -210,6 +229,7 @@ For questions and suggestions, please create an issue in the project repository.
 ## Русский
 
 Мини-игра для Minecraft серверов на базе Paper, в которой игроки соревнуются, кто первым добудет случайный предмет.
+Текущая основная линия релиза поддерживает Minecraft 26.x для Paper, NeoForge и Fabric.
 
 ### Основные функции
 
@@ -274,9 +294,10 @@ banned-items = [
 
 ### Требования
 
-- **Minecraft**: 1.21.x
-- **Сервер**: Paper/Bukkit 1.21 или выше
-- **Java**: 17 или выше
+- **Minecraft**: 26.x (актуально протестировано на 26.1.2)
+- **Сервер**: Paper 26.x
+- **Мод-лоадеры**: NeoForge 26.x, Fabric Loader 0.19.2 + Fabric API 0.150.0+26.1.2
+- **Java**: 25+ для Paper 26.x (для NeoForge/Fabric — 21+)
 
 ### Команди
 
@@ -320,6 +341,10 @@ banned-items = [
 
 - `/lootrush debug` - переключает режим отладки
     - Включает дополнительные логи для загрузки чанков и поиска безопасных локаций
+
+- `/lootrush banlist` - показывает текущий список запрещённых предметов
+- `/lootrush banlist add <item|REGEX:...>` - добавляет предмет/шаблон в banlist и сохраняет конфиг
+- `/lootrush banlist remove <item|REGEX:...>` - удаляет предмет/шаблон из banlist и сохраняет конфиг
 
 ##### Разрешения
 
@@ -399,6 +424,9 @@ banned-items = [
 - Телепортация может занять некоторое время при большом количестве игроков из-за загрузки чанков
 - Скорость загрузки чанков зависит от диска хоста
 - Игра работает только в обычном мире (не в Nether/End)
+- Линия Minecraft 1.21.x поддерживается в режиме best-effort через legacy ветки/теги
+- Основная поддерживаемая линия — Minecraft 26.x
+- Версия для Fabric сейчас находится в активной разработке
 
 ### Лицензия
 
