@@ -52,28 +52,3 @@ jobs:
           name: neoforge-artifacts
           path: mod/neoforge/build/libs/
 
-  fabric:
-    name: Fabric Mod
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: mod/fabric
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Make wrapper executable
-        run: chmod +x ./gradlew
-      - name: Build
-        run: ./gradlew build
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: fabric-artifacts
-          path: mod/fabric/build/libs/
